@@ -1,0 +1,54 @@
+[*] Initializing DataProcessor to load master displacement coordinates...
+[Rank 0] Ingested 8999997 events. Usable fraction for dx=5mm: 99.59% (Time: 1.12s)
+[Rank 0] Ingested 8999997 events. Usable fraction for dx=5mm: 99.59% (Time: 1.10s)
+
+=====================================================================================
+SECTION 1: UNCUT INTERACTION POOL KINEMATICS
+=====================================================================================
+Total Available Events (N) : 8,999,997
+Forward Mean (r_bar)       : 16.8249 mm
+Transverse Spread (perp)   : 43.9523 mm
+Longitudinal Spread (par)  : 43.9785 mm
+Mean Transverse Variance   : 43.9654 mm
+Linear CRLB (sigma_perp)   : 149.68° * sqrt(N)
+Linear CRLB (sigma_trans)  : 149.72° * sqrt(N)  <-- (Paper C baseline: 129.58°)
+
+=====================================================================================
+SECTION 2: POST-CUT KINEMATICS & CUT-SAMPLE CRLB (Chooz Cut: r > Delta_x / sqrt(2))
+=====================================================================================
+   Pitch |  Cut (mm) |  Surviving |  Eff (%) |     r_bar |  sig_perp |  Theta_0,cut |  Theta_0,inc
+------------------------------------------------------------------------------------------
+   5.0 mm |     3.54  |  8,963,306 |   99.59% |   16.89 mm |   44.04 mm |     149.38° |     149.68°
+  50.0 mm |    35.36  |  6,296,259 |   69.96% |   22.50 mm |   51.38 mm |     130.86° |     156.45°
+ 150.0 mm |   106.07  |    691,040 |    7.68% |   52.49 mm |   87.66 mm |      95.69° |     345.32°
+
+=====================================================================================
+SECTION 3: DISCRETE CELL QUANTIZATION & VARIANCE PROPAGATION
+=====================================================================================
+   Pitch | Var_quant (meas) |  Delta^2 / 6 | Ratio to D^2/6 |   Degradation @10k
+---------------------------------------------------------------------------
+   5.0 mm |          2.084 mm² |      4.167 mm² |         0.5002 | +         0.0008°
+  50.0 mm |        207.855 mm² |    416.667 mm² |         0.4989 | +         0.0785°
+ 150.0 mm |       1377.823 mm² |   3750.000 mm² |         0.3674 | +         0.4624°
+
+=====================================================================================
+SECTION 4: POST-CUT QUANTIZATION AT N = 10,000 USABLE EVENTS
+=====================================================================================
+Pitch   5.0 mm: Post-cut r_bar = 16.89 mm | sig_perp = 44.04 mm
+    -> Theoretical pure statistical uncertainty : 1.494°
+    -> With empirical cell quantization added   : 1.495°
+    -> Net angular penalty due to quantization   : +0.0008°
+
+Pitch  50.0 mm: Post-cut r_bar = 22.50 mm | sig_perp = 51.38 mm
+    -> Theoretical pure statistical uncertainty : 1.309°
+    -> With empirical cell quantization added   : 1.358°
+    -> Net angular penalty due to quantization   : +0.0492°
+
+Pitch 150.0 mm: Post-cut r_bar = 52.49 mm | sig_perp = 87.66 mm
+    -> Theoretical pure statistical uncertainty : 0.957°
+    -> With empirical cell quantization added   : 1.075°
+    -> Net angular penalty due to quantization   : +0.1186°
+
+=====================================================================================
+[+] Audit complete. All numbers ready for group presentation.
+=====================================================================================

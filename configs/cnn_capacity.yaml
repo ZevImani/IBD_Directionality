@@ -1,0 +1,24 @@
+# CNN vs centroid / FND: sigma_theta vs N, focused on small N. Train the model(s) first, e.g.
+#   sbatch cnn/submit_train.sh --pitch 50
+#   sbatch cnn/submit_train.sh --pitch 5
+# then   python run.py configs/cnn_capacity.yaml --jobs 1   (on a GPU node; the CNN runs on cuda if present)
+# The CNN trained on events [holdout, end); this study must only draw from [0, holdout).
+name: cnn_capacity
+seed: 3
+data: {max_events: 2000000}       # == --holdout used in cnn/train.py
+sweep:
+  pitch_mm: [50, 5]
+  N: [30, 100, 300, 1000, 3000, 10000]
+  theta_true: [0, 37]             # the capacity plot shows the first; 37 checks off-axis angles
+  K: 200
+methods:
+  centroid_cont: {type: centroid, discrete: false}
+  centroid_disc: {type: centroid, discrete: true}
+  fnd_parab:     {type: fnd, scan: [-180, 179, 1], refine: parabolic}
+  cnn:
+    type: cnn
+    checkpoint:
+      - cnn/checkpoints/resnet50_p50_continuous/best.pt
+      - cnn/checkpoints/resnet50_p5_continuous/best.pt
+plots:
+  - {figure: capacity, methods: [fnd_parab, cnn], ref: centroid_disc}

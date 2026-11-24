@@ -1,0 +1,52 @@
+name: capacity_exposure
+seed: 1
+sweep:
+  pitch_mm:
+  - 150
+  - 50
+  - 5
+  n_total:
+  - 100
+  - 500
+  - 1000
+  - 5000
+  - 10000
+  - 50000
+  - 100000
+  - 500000
+  - 1000000
+  K: 25
+methods:
+  centroid_cont:
+    type: centroid
+    discrete: false
+  centroid_disc:
+    type: centroid
+    discrete: true
+  fnd_parab:
+    type: fnd
+    scan:
+    - -15
+    - 15
+    - 1
+    refine: parabolic
+    max_N: 100000
+  emd_paired:
+    type: emd_paired
+    scan:
+    - -15
+    - 15
+    - 1
+    refine: parabolic
+    max_N: 100000
+plots:
+- figure: capacity
+  methods:
+  - fnd_parab
+  - emd_paired
+  ref: centroid_disc
+- figure: exposure
+  methods:
+  - fnd_parab
+  - emd_paired
+  ref: centroid_disc

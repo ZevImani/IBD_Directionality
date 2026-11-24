@@ -1,0 +1,17 @@
+[meta] Started 2026-11-16T21:23:00 on holy8a24111.rc.fas.harvard.edu | slurm job 61323086 | python 3.8.12, numpy 1.24.4 | run.py configs/smearing.yaml --jobs 16
+[meta] Finished 2026-11-16T21:23:03, 3.0s
+[21:23:00] Loading events (default dataset) ...
+[21:23:00] 8,999,997 events | 12 grid points x K=15 | methods: centroid_disc, fnd_parab, emd_paired | jobs=16
+[21:23:01] (1/12) dx=50 N=10000 th=0 {'aug_smear_sigma_mm': 0}: N=10000 K=15 (0.9s)
+[21:23:01] (2/12) dx=5 N=10000 th=0 {'aug_smear_sigma_mm': 0}: N=10000 K=15 (1.2s)
+[21:23:02] (3/12) dx=50 N=10000 th=0 {'aug_smear_sigma_mm': 5}: N=10000 K=15 (2.1s)
+[21:23:03] (4/12) dx=5 N=10000 th=0 {'aug_smear_sigma_mm': 20}: N=10000 K=15 (2.4s)
+[21:23:03] (5/12) dx=50 N=10000 th=0 {'aug_smear_sigma_mm': 20}: N=10000 K=15 (2.5s)
+[21:23:03] (6/12) dx=5 N=10000 th=0 {'aug_smear_sigma_mm': 30}: N=10000 K=15 (2.5s)
+[21:23:03] (7/12) dx=5 N=10000 th=0 {'aug_smear_sigma_mm': 50}: N=10000 K=15 (2.5s)
+[21:23:03] (8/12) dx=50 N=10000 th=0 {'aug_smear_sigma_mm': 10}: N=10000 K=15 (2.6s)
+[21:23:03] (9/12) dx=5 N=10000 th=0 {'aug_smear_sigma_mm': 5}: N=10000 K=15 (2.7s)
+[21:23:03] (10/12) dx=50 N=10000 th=0 {'aug_smear_sigma_mm': 50}: N=10000 K=15 (2.6s)
+[21:23:03] (11/12) dx=50 N=10000 th=0 {'aug_smear_sigma_mm': 30}: N=10000 K=15 (2.7s)
+[21:23:03] (12/12) dx=5 N=10000 th=0 {'aug_smear_sigma_mm': 10}: N=10000 K=15 (2.8s)
+[21:23:03] Done in 3.0s -> /n/home11/zimani/emd_paper/results/runs/smearing_20261116_212300/trials.csv

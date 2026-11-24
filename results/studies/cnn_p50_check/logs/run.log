@@ -1,0 +1,18 @@
+[23:39:13] Started 2026-11-16T23:39:13 on holygpu7c26306.rc.fas.harvard.edu | slurm job 61354112 | python 3.8.12, numpy 1.24.4 | run.py configs/cnn_p50_check.yaml --jobs 1
+[23:39:13] Loading events ({'max_events': 2000000}) ...
+[23:39:24] 2,000,000 events | 12 grid points x K=1000 | methods: centroid_cont, centroid_disc, fnd_parab, cnn_cont, cnn_disc | jobs=1
+[23:39:36] (1/12) dx=50 N=30 th=0: N=30 K=1000 (12.1s)
+[23:39:47] (2/12) dx=50 N=30 th=37: N=30 K=1000 (11.0s)
+[23:39:59] (3/12) dx=50 N=100 th=0: N=100 K=1000 (11.8s)
+[23:40:11] (4/12) dx=50 N=100 th=37: N=100 K=1000 (11.8s)
+[23:40:25] (5/12) dx=50 N=300 th=0: N=300 K=1000 (14.0s)
+[23:40:39] (6/12) dx=50 N=300 th=37: N=300 K=1000 (14.0s)
+[23:41:02] (7/12) dx=50 N=1000 th=0: N=1000 K=1000 (22.9s)
+[23:41:25] (8/12) dx=50 N=1000 th=37: N=1000 K=1000 (22.9s)
+[23:42:25] (9/12) dx=50 N=3000 th=0: N=3000 K=1000 (59.7s)
+[23:43:25] (10/12) dx=50 N=3000 th=37: N=3000 K=1000 (60.5s)
+[23:46:57] (11/12) dx=50 N=10000 th=0: N=10000 K=1000 (212.0s)
+[23:50:29] (12/12) dx=50 N=10000 th=37: N=10000 K=1000 (212.2s)
+[23:50:30] Finished 2026-11-16T23:50:30, 665.7s -> /n/home11/zimani/emd_paper/results/studies/cnn_p50_check/logs/trials.csv
+[plot] /n/home11/zimani/emd_paper/results/studies/cnn_p50_check/plots/capacity.png
+Run directory: /n/home11/zimani/emd_paper/results/studies/cnn_p50_check

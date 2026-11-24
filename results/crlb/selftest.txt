@@ -1,0 +1,22 @@
+SELFTEST: Gaussian r_xy, mean (16.82, 0) mm, sigma 43.95 mm. Expect CRLB_cont == theta0 at pitch 0, and CRLB_disc -> CRLB_cont as pitch -> 0.
+8,999,997 events. Theta values in deg*sqrt(N_usable); eta_centroid = (CRLB/theta0)^2
+pitch      0  eff 1.0000  theta0  149.69 | CRLB cont K4: 149.66 K8: 149.82 K12: 149.88 | disc     nan  (14 s)
+pitch      1  eff 0.9999  theta0  149.69 | CRLB cont K4: 149.63 K8: 149.58 K12: 149.70 | disc     nan  (15 s)
+pitch      2  eff 0.9995  theta0  149.66 | CRLB cont K4: 149.65 K8: 149.52 K12: 148.92 | disc     nan  (16 s)
+pitch      5  eff 0.9970  theta0  149.47 | CRLB cont K4: 149.47 K8: 149.30 K12: 150.67 | disc     nan  (16 s)
+pitch     10  eff 0.9880  theta0  148.80 | CRLB cont K4: 148.80 K8: 148.87 K12: 148.70 | disc     nan  (16 s)
+pitch     25  eff 0.9275  theta0  144.37 | CRLB cont K4: 144.40 K8: 144.49 K12: 145.11 | disc     nan  (14 s)
+pitch     50  eff 0.7399  theta0  131.36 | CRLB cont K4: 131.33 K8: 131.40 K12: 133.93 | disc  141.44  (12 s)
+pitch    100  eff 0.2996  theta0  101.93 | CRLB cont K4: 101.91 K8: 101.79 K12: 101.45 | disc  120.22  (5 s)
+pitch    150  eff 0.0662  theta0   80.45 | CRLB cont K4:  81.20 K8:  80.44 K12:  81.21 | disc  101.20  (2 s)
+
+ pitch_mm    eff   theta0  crlb_cont  crlb_disc  eta_centroid_cont
+   0.0000 1.0000 149.6948   149.8157        NaN             1.0016
+   1.0000 0.9999 149.6857   149.5783        NaN             0.9986
+   2.0000 0.9995 149.6584   149.5224        NaN             0.9982
+   5.0000 0.9970 149.4685   149.2954        NaN             0.9977
+  10.0000 0.9880 148.7980   148.8707        NaN             1.0010
+  25.0000 0.9275 144.3657   144.4915        NaN             1.0017
+  50.0000 0.7399 131.3619   131.4021   141.4381             1.0006
+ 100.0000 0.2996 101.9270   101.7909   120.2162             0.9973
+ 150.0000 0.0662  80.4475    80.4441   101.2044             0.9999

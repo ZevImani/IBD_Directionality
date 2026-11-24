@@ -1,0 +1,22 @@
+# 50 mm CNN check on held-out events: CNN (continuous and discrete inputs) vs both centroids and FND.
+#   python run.py configs/cnn_p50_check.yaml --jobs 1 --methods centroid_cont,centroid_disc,fnd_parab,cnn_cont --tag cont
+#   python run.py configs/cnn_p50_check.yaml --jobs 1          # once cnn/checkpoints/p50_disc/best.pt exists
+#   python cnn/compare.py results/studies/cnn_p50_check     # table of Theta and ratios
+# Each CNN gets its own label: one `cnn` entry holds at most one checkpoint per pitch.
+name: cnn_p50_check
+seed: 4
+data: {max_events: 2000000}       # == --holdout used in cnn/train.py (events training never saw)
+sweep:
+  pitch_mm: [50]
+  N: [30, 100, 300, 1000, 3000, 10000]
+  theta_true: [0, 37]             # the capacity plot shows 0; 37 checks an off-axis angle
+  K: 1000                         # sigma known to ~+-2% per entry; the CNN-vs-centroid gaps are 1-3%
+methods:
+  centroid_cont: {type: centroid, discrete: false}   # exact displacements (what training validation compared to)
+  centroid_disc: {type: centroid, discrete: true}    # cell-snapped: what a 50 mm detector reads out
+  fnd_parab:     {type: fnd, scan: [-180, 179, 1], refine: parabolic}
+  cnn_cont:      {type: cnn, checkpoint: cnn/checkpoints/p50_e60/best.pt}
+  cnn_disc:      {type: cnn, checkpoint: cnn/checkpoints/p50_disc/best.pt}
+plots:
+  - {figure: methods, ref: centroid_disc}            # all methods overlaid: sigma, Theta, ratio
+  - {figure: capacity, methods: [fnd_parab, cnn_cont, cnn_disc], ref: centroid_disc}

@@ -1,0 +1,21 @@
+# Full 360-degree linearity / isotropy: inject theta_true and reconstruct.
+# Replaces paper_c_stats_package_v0_6_6_4.py --mode angle-sweep + plot_full360_publication_v5.py.
+# Any angle is made from the same data: the measurement is rotated (= the detector bins are
+# rotated the other way) before binning, and same_samples reuses the K draws at every angle.
+# Rotation convention is CCW for injection and every estimator (no centroid sign flip).
+# Heavy: 720 angles x 3 pitches x K -> use --jobs.
+name: angle_sweep
+seed: 6
+sweep:
+  pitch_mm: [150, 50, 5]
+  N: [10000]
+  theta_true: {start: -180, stop: 179.5, step: 0.5}
+  K: 10
+  same_samples: true
+methods:
+  centroid_disc: {type: centroid, discrete: true}
+  fnd_argmin:    {type: fnd, scan: [-180, 179, 1], refine: argmin}
+  fnd_parab:     {type: fnd, scan: [-180, 179, 1], refine: parabolic}
+plots:
+  - {figure: full360, method: fnd_argmin}
+  - {figure: full360, method: centroid_disc, name: full360_centroid}

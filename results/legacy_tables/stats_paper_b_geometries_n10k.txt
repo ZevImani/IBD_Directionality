@@ -1,0 +1,16 @@
+# Paper B Geometries 12-Test Suite (N=10000, theta=10.0 deg)
+
+GEOMETRY: dx = 150 mm | gs =  3x 3 | Usable = 691040 (7.68%) | Max Disjoint = 69
+EMD: 79.4893 (vs A), 341.1611 (vs B)
+KL:  0.003618 (vs A), 0.062160 (vs B)
+Watson: 0.4849 (vs A), 8.4071 (vs B)
+
+GEOMETRY: dx =  50 mm | gs =  9x 9 | Usable = 6296259 (69.96%) | Max Disjoint = 629
+EMD: 5.5961 (vs A), 23.2282 (vs B)
+KL:  0.011646 (vs A), 0.044269 (vs B)
+Watson: 0.1572 (vs A), 3.4188 (vs B)
+
+GEOMETRY: dx =   5 mm | gs = 89x89 | Usable = 8963306 (99.59%) | Max Disjoint = 896
+EMD: 0.0209 (vs A), 0.0338 (vs B)
+KL:  0.453185 (vs A), 0.444826 (vs B)
+Watson: 0.2221 (vs A), 0.8820 (vs B)

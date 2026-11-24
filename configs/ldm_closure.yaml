@@ -1,0 +1,25 @@
+# Closure test for the diffusion generator (ldm/): run the SAME study on real and on generated
+# events and compare sigma_theta per method. A good generator gives ratios consistent with 1.
+#
+#   python run.py configs/ldm_closure.yaml --jobs 16                                  # real
+#   python ldm/sample.py -r <ckpt> -n 2000000 -o ldm/samples/<name>                    # GPU
+#   python run.py configs/ldm_closure.yaml --data ldm/samples/<name> --tag gen --jobs 16
+#   python ldm/closure.py ldm_closure ldm_closure_gen                                  # ratio figure
+#
+# The real run uses only events [0, 2M), which the generator never trained on. Generate the
+# same number of events (2M), so both pools have the same finite-pool trial overlap.
+name: ldm_closure
+seed: 11
+data: {max_events: 2000000}
+sweep:
+  pitch_mm: [150, 50, 5]
+  N: [100, 1000, 10000]
+  theta_true: [0]
+  K: 1000                         # sigma ratio error ~3% (K=200 gives ~7%, too coarse to see a 5% effect)
+methods:
+  centroid_cont: {type: centroid, discrete: false}
+  centroid_disc: {type: centroid, discrete: true}
+  fnd_parab:     {type: fnd, scan: [-30, 30, 1], refine: parabolic}
+  emd_sliced:    {type: emd_sliced, scan: [-30, 30, 1], refine: parabolic}
+plots:
+  - {figure: capacity, methods: [fnd_parab, emd_sliced], ref: centroid_disc}

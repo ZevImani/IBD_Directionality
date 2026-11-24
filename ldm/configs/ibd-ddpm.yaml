@@ -1,0 +1,64 @@
+# DDPM on single IBD events (displacement r = capture - vertex), no autoencoder.
+#   sbatch submit_train.sh                       (or see README.md for the full command)
+# Data: emd_paper/dataset, split as in cnn/ (train = events [2.5M, end), ~6.5M events).
+# One epoch = ~1590 steps of 4096 events.
+model:
+  base_learning_rate: 1.0e-3     # run main.py with --scale_lr False (submit_train.sh does)
+  target: ldm.models.diffusion.event_ddpm.EventDDPM
+  params:
+    dims: 3                      # 3: (r_x, r_y, r_z); 2: (r_x, r_y) only, which is all dirreco/cnn use
+    scale_mm: 50.0               # network sees r / 50 mm (std ~0.9). Isotropic, no centring
+    timesteps: 1000
+    beta_schedule: cosine        # alphabar_T = 2e-9. The LDM 'linear' schedule leaves alphabar_T = 7e-4 and biases
+                                 # mean r_x by -0.5 mm even with an exact denoiser (tested), so don't use it here
+    parameterization: eps
+    loss_type: l2
+    first_stage_key: event
+    use_ema: True
+    monitor: val/loss_simple_ema
+    log_every_t: 200
+    eval_events: 100000          # generated every validation epoch for the val/gen_* metrics
+    eval_ddim_steps: 250         # monitoring only. With an EXACT denoiser DDIM-250 gives std -0.4%, mean_x -0.1 mm;
+                                 # DDIM-100 gives -1.1% / -0.3 mm. Use 1000 steps for paper samples (sample.py default)
+    log_events: 100000           # events in the image-logger marginal plot
+    scheduler_config:            # multiplies base_learning_rate
+      target: ldm.lr_scheduler.LambdaWarmUpCosineScheduler
+      params:
+        warm_up_steps: 2000
+        lr_start: 0.01
+        lr_max: 1.0
+        lr_min: 0.01
+        max_decay_steps: 238050  # = max_epochs x 1587 steps/epoch: the cosine ends at the last step
+    unet_config:
+      target: ldm.modules.diffusionmodules.mlp.EventMLP
+      params:
+        in_dim: ${model.params.dims}
+        hidden: 512
+        n_blocks: 6
+        time_dim: 128
+        dropout: 0.0
+
+data:
+  target: ldm.data.ibd.IBDDataModule
+  params:
+    batch_size: 4096
+    dims: ${model.params.dims}
+    scale_mm: ${model.params.scale_mm}
+    flip_y: True                 # y -> -y is an exact symmetry of the MC (beam along +x)
+    max_train_events: null       # set small for smoke tests
+    max_val_events: null
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 10000
+        max_images: 1
+        increase_log_steps: False
+        clamp: True
+  trainer:
+    benchmark: False
+    max_epochs: 150
+    check_val_every_n_epoch: 2   # each validation also samples eval_events events
+    gradient_clip_val: 1.0

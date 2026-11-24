@@ -1,0 +1,64 @@
+name: landscape
+kind: landscape
+seed: 7
+sweep:
+  pitch_mm:
+  - 150
+  - 5
+  N:
+  - 10000
+  K: 15
+methods:
+  image_l2:
+    type: image_l2
+    scan:
+    - 0
+    - 180
+    - 10
+  fnd:
+    type: fnd
+    scan:
+    - 0
+    - 180
+    - 10
+  emd_paired:
+    type: emd_paired
+    scan:
+    - 0
+    - 180
+    - 10
+  emd_sliced:
+    type: emd_sliced
+    scan:
+    - 0
+    - 180
+    - 10
+  emd_sliced_kr100:
+    type: emd_sliced_kr
+    lam: 100
+    scan:
+    - 0
+    - 180
+    - 10
+  emd_sinkhorn:
+    type: emd_sinkhorn
+    scan:
+    - 0
+    - 180
+    - 10
+  emd_sinkhorn_reach100:
+    type: emd_sinkhorn
+    reach: 100
+    scan:
+    - 0
+    - 180
+    - 10
+  mmd_energy:
+    type: mmd
+    kernel: energy
+    scan:
+    - 0
+    - 180
+    - 10
+plots:
+- figure: landscape

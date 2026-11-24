@@ -1,0 +1,61 @@
+# What's tracked: code (dirreco/, cnn/, ldm/, run.py, plot.py), configs/, slurm/, docs,
+# per-study figures + summaries, Max's legacy tables, and the pre-refactor code in archive/.
+# Not tracked: the dataset, model weights, training runs, per-trial CSVs, job logs.
+# cnn/.gitignore and ldm/.gitignore add a few rules of their own.
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# ---- Dataset: 436 MB, too big for git; see "Getting the data" in README.md ----
+dataset/
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# ---- Model weights & checkpoints ----
+*.pt
+*.pth
+*.ckpt
+cnn/checkpoints/
+cnn/logs/*
+!cnn/logs/.gitkeep
+
+# ---- Training runs & experiment tracking ----
+ldm/logs/*
+!ldm/logs/.gitkeep
+ldm/samples/
+ldm/src/
+wandb/
+
+# ---- Results: keep figures + summary.csv / landscape.csv / config.yaml / run.log ----
+# trials.csv (every per-trial estimate) is 0.1-2 MB per study and is rewritten on every rerun.
+results/studies/*/logs/trials.csv
+results/studies/*_custom/
+results/slurm_logs/*
+!results/slurm_logs/.gitkeep
+# Re-plots of Max's tables: regenerate with `python plot.py legacy:<study>`
+results/plots/legacy_*/
+
+# ---- archive/: keep code, docs, audit and READMEs ----
+archive/tarballs/
+archive/logs/
+archive/results/
+archive/code/review_deliverables
+
+# ---- Archives & job output ----
+*.tar
+*.tar.gz
+*.tar.xz
+*.zip
+*.out
+*.err

@@ -1,0 +1,14 @@
+__pycache__/
+*.egg-info
+*.err
+*.out
+
+## Runs and generated data (large)
+logs/*
+!logs/.gitkeep
+samples/
+wandb/
+
+## builds with LDM repo (unmodified)
+taming
+src

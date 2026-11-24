@@ -1,0 +1,42 @@
+name: scaling
+seed: 2
+sweep:
+  pitch_mm:
+  - 150
+  - 50
+  - 25
+  - 10
+  - 5
+  - 1
+  N:
+  - 100
+  - 500
+  - 1000
+  - 5000
+  - 10000
+  - 50000
+  K: 20
+methods:
+  centroid_disc:
+    type: centroid
+    discrete: true
+  fnd_parab:
+    type: fnd
+    scan:
+    - -180
+    - 179
+    - 1
+    refine: parabolic
+    max_N: 20000
+    max_grid: 450
+  emd_paired:
+    type: emd_paired
+    scan:
+    - -180
+    - 179
+    - 1
+    refine: parabolic
+    max_N: 20000
+plots:
+- figure: scaling
+  ref: centroid_disc

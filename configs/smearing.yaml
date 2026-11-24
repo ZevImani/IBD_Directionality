@@ -1,0 +1,20 @@
+# Robustness to detector position resolution (Gaussian smearing of vertex and capture).
+# Replaces run_smearing_sensitivity_suite_v1_0.py + plot_smearing_sensitivity_v1_0.py.
+# apply_to: meas keeps the reference template un-smeared (Max's choice = template mismatch);
+# use apply_to: both for a template simulated with the same detector response.
+name: smearing
+seed: 4
+sweep:
+  pitch_mm: [50, 5]
+  N: [10000]
+  K: 15
+augment:
+  apply_to: meas
+  steps:
+    - {type: smear, sigma_mm: [0, 5, 10, 20, 30, 50]}
+methods:
+  centroid_disc: {type: centroid, discrete: true}
+  fnd_parab:     {type: fnd, scan: [-15, 15, 1], refine: parabolic}
+  emd_paired:    {type: emd_paired, scan: [-15, 15, 1], refine: parabolic}
+plots:
+  - {figure: smearing}

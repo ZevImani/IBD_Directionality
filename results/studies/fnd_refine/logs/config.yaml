@@ -1,0 +1,55 @@
+name: fnd_refine
+seed: 3
+sweep:
+  pitch_mm:
+  - 150
+  - 50
+  - 5
+  N:
+  - 100
+  - 500
+  - 1000
+  - 5000
+  - 10000
+  - 50000
+  n_total:
+  - 500
+  - 1000
+  - 5000
+  - 10000
+  - 50000
+  - 100000
+  K: 25
+methods:
+  centroid_disc:
+    type: centroid
+    discrete: true
+  fnd_parab:
+    type: fnd
+    scan:
+    - -180
+    - 179
+    - 1
+    refine: parabolic
+  fnd_sine:
+    type: fnd
+    scan:
+    - -180
+    - 179
+    - 1
+    refine: sine
+plots:
+- figure: capacity
+  methods:
+  - fnd_parab
+  - fnd_sine
+  ref: centroid_disc
+- figure: exposure
+  methods:
+  - fnd_parab
+  - fnd_sine
+  ref: centroid_disc
+- figure: pair
+  a: fnd_parab
+  b: fnd_sine
+  N: 10000

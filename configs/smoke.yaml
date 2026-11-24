@@ -1,0 +1,28 @@
+# Quick check that every method runs; use it when adding a new method.
+#   python run.py configs/smoke.yaml            (geomloss/torch methods use the GPU if present)
+name: smoke
+seed: 0
+sweep:
+  pitch_mm: [50, 5]
+  N: [500]
+  theta_true: [0, 30]
+  K: 4
+methods:
+  centroid_cont:        {type: centroid, discrete: false}
+  centroid_disc:        {type: centroid, discrete: true}
+  fnd_parab:            {type: fnd, scan: [-180, 179, 1], refine: parabolic}
+  fnd_sine:             {type: fnd, scan: [-180, 179, 1], refine: sine}
+  image_l2:             {type: image_l2, scan: [-60, 60, 1], refine: parabolic}
+  emd_paired:           {type: emd_paired, scan: [-180, 179, 1], refine: parabolic}
+  emd_exact:            {type: emd_exact, scan: [-60, 60, 3], refine: parabolic}
+  emd_exact_partial90:  {type: emd_exact, unbalanced: partial, mass: 0.9, scan: [-60, 60, 3], refine: parabolic}
+  emd_exact_kr30:       {type: emd_exact, unbalanced: kr, lam: 30, scan: [-60, 60, 3], refine: parabolic}
+  emd_sinkhorn:         {type: emd_sinkhorn, scan: [-60, 60, 3], refine: parabolic}
+  emd_sinkhorn_reach30: {type: emd_sinkhorn, reach: 30, scan: [-60, 60, 3], refine: parabolic}
+  emd_sinkhorn_w2:      {type: emd_sinkhorn, p: 2, scan: [-60, 60, 3], refine: parabolic}
+  emd_sliced:           {type: emd_sliced, scan: [-60, 60, 1], refine: parabolic}
+  emd_sliced_max:       {type: emd_sliced, reduce: max, scan: [-60, 60, 1], refine: parabolic}
+  emd_sliced_kr30:      {type: emd_sliced_kr, lam: 30, scan: [-60, 60, 1], refine: parabolic}
+  mmd_energy:           {type: mmd, kernel: energy, scan: [-60, 60, 3], refine: parabolic}
+plots:
+  - {figure: capacity, methods: [fnd_parab, emd_exact, emd_sinkhorn, emd_sliced_kr30], ref: centroid_disc}

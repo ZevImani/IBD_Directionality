@@ -1,0 +1,38 @@
+# Every EMD / OT variant (balanced and unbalanced) against FND and the centroid.
+# lam / reach are lengths in mm: displacements have median |r| ~50-120 mm, max ~370 mm,
+# so 30 mm cuts the tails hard and 100 mm only the far tail.
+# Exact solvers are O(N^3) per angle (max_N 1000); Sinkhorn variants want the GPU.
+#   sbatch slurm/reproduce_gpu.sh
+name: emd_compare
+seed: 8
+sweep:
+  pitch_mm: [150, 50, 5, 1]
+  N: [100, 500, 1000, 5000, 10000]
+  K: 25
+methods:
+  # references
+  centroid_disc:        {type: centroid, discrete: true}
+  fnd_parab:            {type: fnd, scan: [-15, 15, 1], refine: parabolic}
+  emd_paired:           {type: emd_paired, scan: [-15, 15, 1], refine: parabolic}
+  # exact (POT)
+  emd_exact:            {type: emd_exact, scan: [-15, 15, 1], refine: parabolic, max_N: 1000}
+  emd_exact_partial90:  {type: emd_exact, unbalanced: partial, mass: 0.9, scan: [-15, 15, 1], refine: parabolic, max_N: 1000}
+  emd_exact_kr30:       {type: emd_exact, unbalanced: kr, lam: 30, scan: [-15, 15, 1], refine: parabolic, max_N: 1000}
+  emd_exact_kr100:      {type: emd_exact, unbalanced: kr, lam: 100, scan: [-15, 15, 1], refine: parabolic, max_N: 1000}
+  # entropic (geomloss, GPU)
+  emd_sinkhorn:         {type: emd_sinkhorn, p: 1, blur: 1.0, scan: [-15, 15, 1], refine: parabolic, max_N: 10000}
+  emd_sinkhorn_reach100: {type: emd_sinkhorn, p: 1, blur: 1.0, reach: 100, scan: [-15, 15, 1], refine: parabolic, max_N: 10000}
+  # sliced
+  emd_sliced:           {type: emd_sliced, n_proj: 32, scan: [-15, 15, 1], refine: parabolic}
+  emd_sliced_max:       {type: emd_sliced, n_proj: 32, reduce: max, scan: [-15, 15, 1], refine: parabolic}
+  emd_sliced_kr30:      {type: emd_sliced_kr, n_proj: 32, lam: 30, bin_width: 2, scan: [-15, 15, 1], refine: parabolic}
+  emd_sliced_kr100:     {type: emd_sliced_kr, n_proj: 32, lam: 100, bin_width: 2, scan: [-15, 15, 1], refine: parabolic}
+  # kernel (non-OT) baselines
+  mmd_energy:           {type: mmd, kernel: energy, scan: [-15, 15, 1], refine: parabolic, max_N: 10000}
+  mmd_gaussian50:       {type: mmd, kernel: gaussian, blur: 50, scan: [-15, 15, 1], refine: parabolic, max_N: 10000}
+  mmd_laplacian50:      {type: mmd, kernel: laplacian, blur: 50, scan: [-15, 15, 1], refine: parabolic, max_N: 10000}
+plots:
+  - {figure: capacity, name: capacity_balanced, methods: [emd_paired, emd_exact, emd_sinkhorn, emd_sliced], ref: centroid_disc}
+  - {figure: capacity, name: capacity_unbalanced, methods: [emd_exact_kr30, emd_exact_kr100, emd_exact_partial90, emd_sinkhorn_reach100, emd_sliced_kr30, emd_sliced_kr100], ref: centroid_disc}
+  - {figure: capacity, name: capacity_variants, methods: [emd_sliced_max, mmd_energy, mmd_gaussian50, mmd_laplacian50, fnd_parab], ref: centroid_disc}
+  - {figure: scaling, methods: [fnd_parab, emd_paired, emd_exact, emd_sinkhorn, emd_sliced, emd_sliced_kr100], ref: centroid_disc}

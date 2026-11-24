@@ -1,0 +1,19 @@
+# sigma_theta over the (pitch, N) plane. Replaces run_pitch_vs_N_matrix_sweep_v1_0.py +
+# plot_3d_phase_space_perfected.py. For Max's 1k-15k "dense kink" audit
+# (run_dense_kink_sweep_v1_0.py) use:
+#   python run.py configs/phase_space.yaml --pitch 150,50,5 --K 25 --tag kink \
+#     --N 1000,2000,3000,4000,4500,4750,5000,5250,5500,6000,7500,10000,15000,20000,50000
+name: phase_space
+seed: 5
+sweep:
+  pitch_mm: [0.5, 1, 5, 10, 25, 50, 100, 150]
+  N: [100, 500, 1000, 5000, 10000, 50000, 100000, 500000]
+  K: 5
+methods:
+  centroid_cont: {type: centroid, discrete: false}
+  centroid_disc: {type: centroid, discrete: true}
+  fnd_argmin:    {type: fnd, scan: [-180, 179, 1], refine: argmin, min_pitch: 1, max_grid: 450, max_N: 100000}
+plots:
+  - {figure: phase3d, method: centroid_disc}
+  - {figure: phase3d, method: fnd_argmin, name: phase3d_fnd}
+  - {figure: capacity, methods: [fnd_argmin, centroid_cont], ref: centroid_disc}

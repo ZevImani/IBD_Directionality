@@ -1,0 +1,21 @@
+8,999,997 events. Theta values in deg*sqrt(N_usable); eta_centroid = (CRLB/theta0)^2
+pitch      0  eff 1.0000  theta0  149.68 | CRLB cont K4: 146.65 K8: 146.64 K12: 146.20 | disc     nan  (18 s)
+pitch      1  eff 0.9998  theta0  149.66 | CRLB cont K4: 146.65 K8: 146.69 K12: 146.66 | disc     nan  (21 s)
+pitch      2  eff 0.9993  theta0  149.62 | CRLB cont K4: 146.59 K8: 146.81 K12: 146.79 | disc     nan  (21 s)
+pitch      5  eff 0.9959  theta0  149.38 | CRLB cont K4: 146.38 K8: 146.46 K12: 146.08 | disc     nan  (21 s)
+pitch     10  eff 0.9844  theta0  148.54 | CRLB cont K4: 145.63 K8: 145.94 K12: 145.88 | disc     nan  (20 s)
+pitch     25  eff 0.9102  theta0  143.45 | CRLB cont K4: 140.76 K8: 140.90 K12: 140.58 | disc     nan  (19 s)
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K4: 128.86 K8: 128.78 K12: 128.36 | disc  138.49  (14 s)
+pitch    100  eff 0.2789  theta0  109.03 | CRLB cont K4: 108.07 K8: 108.09 K12: 108.14 | disc  125.98  (6 s)
+pitch    150  eff 0.0768  theta0   95.69 | CRLB cont K4:  95.14 K8:  95.14 K12:  96.05 | disc  116.84  (2 s)
+
+ pitch_mm    eff   theta0  crlb_cont  crlb_disc  eta_centroid_cont
+   0.0000 1.0000 149.6757   146.6380        NaN             0.9598
+   1.0000 0.9998 149.6597   146.6906        NaN             0.9607
+   2.0000 0.9993 149.6221   146.8097        NaN             0.9628
+   5.0000 0.9959 149.3757   146.4608        NaN             0.9614
+  10.0000 0.9844 148.5441   145.9376        NaN             0.9652
+  25.0000 0.9102 143.4516   140.9036        NaN             0.9648
+  50.0000 0.6996 130.8570   128.7825   138.4938             0.9685
+ 100.0000 0.2789 109.0316   108.0899   125.9822             0.9828
+ 150.0000 0.0768  95.6864    95.1392   116.8390             0.9886

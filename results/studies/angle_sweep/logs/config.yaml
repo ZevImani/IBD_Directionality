@@ -1,0 +1,39 @@
+name: angle_sweep
+seed: 6
+sweep:
+  pitch_mm:
+  - 150
+  - 50
+  - 5
+  N:
+  - 10000
+  theta_true:
+    start: -180
+    stop: 179.5
+    step: 0.5
+  K: 10
+  same_samples: true
+methods:
+  centroid_disc:
+    type: centroid
+    discrete: true
+  fnd_argmin:
+    type: fnd
+    scan:
+    - -180
+    - 179
+    - 1
+    refine: argmin
+  fnd_parab:
+    type: fnd
+    scan:
+    - -180
+    - 179
+    - 1
+    refine: parabolic
+plots:
+- figure: full360
+  method: fnd_argmin
+- figure: full360
+  method: centroid_disc
+  name: full360_centroid

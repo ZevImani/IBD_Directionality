@@ -20,11 +20,14 @@ class PLMSSampler(object):
             attr = attr.to(self.model.device)
         setattr(self, name, attr)
 
-    def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):
+    def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True,
+                      min_alpha_cumprod=1e-6):
         if ddim_eta != 0:
             raise ValueError('ddim_eta must be 0 for PLMS')
         self.ddim_timesteps = make_ddim_timesteps(ddim_discr_method=ddim_discretize, num_ddim_timesteps=ddim_num_steps,
-                                                  num_ddpm_timesteps=self.ddpm_num_timesteps,verbose=verbose)
+                                                  num_ddpm_timesteps=self.ddpm_num_timesteps,verbose=verbose,
+                                                  alphas_cumprod=self.model.alphas_cumprod.detach().cpu().numpy(),
+                                                  min_alpha_cumprod=min_alpha_cumprod)
         alphas_cumprod = self.model.alphas_cumprod
         assert alphas_cumprod.shape[0] == self.ddpm_num_timesteps, 'alphas have to be defined for each timestep'
         to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)

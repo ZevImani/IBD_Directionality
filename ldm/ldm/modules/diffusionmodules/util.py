@@ -43,7 +43,32 @@ def make_beta_schedule(schedule, n_timestep, linear_start=1e-4, linear_end=2e-2,
     return betas.numpy()
 
 
-def make_ddim_timesteps(ddim_discr_method, num_ddim_timesteps, num_ddpm_timesteps, verbose=True):
+def make_ddim_timesteps(ddim_discr_method, num_ddim_timesteps, num_ddpm_timesteps, verbose=True,
+                        alphas_cumprod=None, min_alpha_cumprod=1e-6):
+    """DDIM/PLMS timesteps (ascending). With `alphas_cumprod`, timesteps whose alpha_bar is below
+    `min_alpha_cumprod` are dropped from the noisy end, so sampling never steps OUT of them.
+
+    Why: the cosine schedule clips the last beta to 0.999, so alpha_bar[T-1] = 1e-3 * alpha_bar[T-2]
+    (2.4e-9 vs 2.4e-6 for T=1000). A deterministic step out of T-1 multiplies eps-prediction errors by
+    sqrt(alpha_prev / alpha_bar[T-1]): ~32x for S=T, ~63x for S=T/2. For the IBD model that gave ~1e-4
+    far outliers (up to 277 m) and a +1 mm (S=1000) / +2 mm (S=500) bias in mean r_x
+    (ldm/samples/sampler_ab, 2026-11-24). x at T-2 is still pure noise (sqrt(alpha_bar) = 1.6e-3), so
+    starting there from N(0, 1) is exact to ~1e-3. Schedules with alpha_bar_T >= 1e-6 (e.g. the LDM
+    "linear" one, 7e-4) are unchanged.
+    """
+    steps_out = _make_ddim_timesteps(ddim_discr_method, num_ddim_timesteps, num_ddpm_timesteps)
+    if alphas_cumprod is not None and min_alpha_cumprod:
+        keep = np.asarray(alphas_cumprod)[steps_out] >= min_alpha_cumprod
+        keep[0] = True                                  # alpha_bar decreases with t: keep is a prefix
+        if verbose and not keep.all():
+            print(f'DDIM: dropping timesteps {steps_out[~keep]} (alpha_bar < {min_alpha_cumprod:g})')
+        steps_out = steps_out[keep]
+    if verbose:
+        print(f'Selected timesteps for ddim sampler: {steps_out}')
+    return steps_out
+
+
+def _make_ddim_timesteps(ddim_discr_method, num_ddim_timesteps, num_ddpm_timesteps):
     if ddim_discr_method == 'uniform':
         c = num_ddpm_timesteps // num_ddim_timesteps
         ddim_timesteps = np.asarray(list(range(0, num_ddpm_timesteps, c)))
@@ -57,8 +82,6 @@ def make_ddim_timesteps(ddim_discr_method, num_ddim_timesteps, num_ddpm_timestep
     steps_out = ddim_timesteps + 1
     if steps_out[-1] >= num_ddpm_timesteps:  # num_ddim_timesteps == num_ddpm_timesteps: +1 would overflow
         steps_out = ddim_timesteps
-    if verbose:
-        print(f'Selected timesteps for ddim sampler: {steps_out}')
     return steps_out
 
 

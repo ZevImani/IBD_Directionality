@@ -32,6 +32,7 @@ from omegaconf import OmegaConf
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ldm.data.ibd import BOX_MM  # noqa: E402
 from ldm.models.diffusion.event_ddpm import load_event_ddpm  # noqa: E402
+from ldm.modules.diffusionmodules.util import make_ddim_timesteps  # noqa: E402
 
 
 def find_config(ckpt):
@@ -79,7 +80,12 @@ def main():
     os.makedirs(a.outdir, exist_ok=True)
     np.save(os.path.join(a.outdir, "vertices.npy"), vtx)
     np.save(os.path.join(a.outdir, "captures.npy"), vtx + r)
+    # First timestep actually sampled from (the DDIM schedule skips alpha_bar < 1e-6, i.e. t=999 for cosine).
+    first_t = (int(make_ddim_timesteps("uniform", a.ddim_steps, model.num_timesteps, verbose=False,
+                                       alphas_cumprod=model.alphas_cumprod.cpu().numpy())[-1])
+               if a.ddim_steps else model.num_timesteps - 1)
     meta = dict(checkpoint=os.path.abspath(a.resume), config=os.path.abspath(cfg_path), n_events=len(r),
+                first_t=first_t,
                 dims=model.dims, ddim_steps=a.ddim_steps, eta=a.eta, ema=not a.no_ema,
                 symmetrize_y=not a.no_symmetrize, seed=a.seed, seconds=round(dt, 1),
                 raw_mean_r_mm=[round(float(v), 4) for v in raw_mean],

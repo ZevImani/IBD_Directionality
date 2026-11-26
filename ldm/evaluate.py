@@ -139,6 +139,15 @@ def t_marginals(rep, A, B, G):
             f"  gen {1e3 * vals['gen'][0]:8.3f}+-{1e3 * vals['gen'][1]:.3f}")
         tails[R] = vals
     out["tails"] = tails
+
+    # A few far outliers barely move KS/W1 but shift a trial's centroid (a mean) and the std behind
+    # theta0. They showed up during training as val/gen_dstd jumps of 1-3.5 mm with flat W1.
+    rmax = max(pa["|r|"].max(), pb["|r|"].max())
+    far = np.sort(pg["|r|"][pg["|r|"] > rmax])[::-1]
+    rep(f"\n== extreme outliers: max |r|  A {pa['|r|'].max():.0f}  B {pb['|r|'].max():.0f}  gen {pg['|r|'].max():.0f} mm;"
+        f"  {len(far)} gen events beyond the real max" + (f" (largest: {np.round(far[:5]).tolist()} mm)" if len(far) else ""))
+    out["outliers"] = dict(max_A=float(pa["|r|"].max()), max_B=float(pb["|r|"].max()),
+                           max_gen=float(pg["|r|"].max()), n_beyond_real_max=int(len(far)), largest=far[:20].tolist())
     return out
 
 

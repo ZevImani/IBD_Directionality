@@ -20,6 +20,8 @@
 #SBATCH --mem=5G
 #SBATCH -t 0-01:35
 #SBATCH -o logs/slurm-%x-%j.out
+#SBATCH --mail-type=END,FAIL
+# Mail goes to the address on your cluster account; add --mail-user=<address> on the sbatch line to override.
 
 set -eo pipefail
 cd "$SLURM_SUBMIT_DIR"

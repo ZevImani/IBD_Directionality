@@ -45,8 +45,9 @@ Facts about the MC pool that the design rests on (all checked on the full 9M eve
 |---|---|---|
 | Denoiser | `EventMLP`: 6 residual blocks, width 512, FiLM time conditioning, ~6M params | Events are vectors; a UNet does not apply |
 | Noise schedule | cosine, T = 1000 | With an **exact** Gaussian denoiser, the LDM "linear" schedule (ᾱ_T = 7e-4) biases mean r_x by −0.5 mm at any step count; cosine (ᾱ_T = 2e-9) does not |
-| Sampler for paper data | DDIM, 1000 steps, η = 0 (`sample.py` default) or ancestral DDPM (`--ddim-steps 0`) | Exact-denoiser test: DDIM-100 gives std −1.1%, mean r_x −0.26 mm; DDIM-250 gives −0.4% / −0.09 mm; DDIM-1000 is unbiased within 0.1% |
+| Sampler for paper data | DDIM, 1000 steps, η = 0 (`sample.py` default) or ancestral DDPM (`--ddim-steps 0`) | Exact-denoiser test (`test_sampler.py`, with the t = 999 guard below): DDIM-100 gives std −1.2%, mean r_x −0.18 mm; DDIM-250 −0.49% / −0.05 mm; DDIM-500 −0.25% / −0.05 mm; DDIM-1000 −0.12% / −0.02 mm |
 | Monitoring during training | DDIM-250 on 100k events every 2 epochs (`val/gen_*`) | Cheap; read its ~0.4% width deficit as sampler error, not model error |
+| DDIM/PLMS never step out of t = 999 | `make_ddim_timesteps` drops timesteps with ᾱ < 1e-6 (cosine: DDIM-1000 starts at t = 998, DDIM-500 at 997) | The cosine schedule clips the last β to 0.999, so ᾱ₉₉₉ = 10⁻³ ᾱ₉₉₈ (2.4e-9). A deterministic step out of it multiplies the network's ε error by √1000 ≈ 32 (DDIM-1000) or ≈ 63 (DDIM-500). With the trained model this gave ~1e-4 outliers up to 277 m and mean r_x +0.95 / +2.0 mm. Starting at 998 or ancestral sampling both matched real (`samples/sampler_ab/results.txt`, 2026-11-24). The exact-denoiser test cannot see this, because its ε has no error |
 | Precision | fp32 throughout | Moments are needed to 0.1% |
 
 These sampler-bias numbers are floors, measured with the analytically exact noise predictor. A trained model can only add to them.
@@ -115,6 +116,8 @@ Pick checkpoints on these, not only on the loss.
 | `ldm/ibd_metrics.py` | θ₀, usable cut, centroid angle, marginal comparison figure |
 | `main.py` | Training entry point (Lightning); `--resume <run dir or ckpt>` |
 | `sample.py`, `evaluate.py`, `closure.py` | Generate; test vs held-out real; compare a study run on real vs generated |
+| `test_sampler.py` | No-network sampler tests (~10 s, CPU): no DDIM step with ᾱ ratio > 10; exact-denoiser bias per step count; ε-error amplification ≤ 1.5× continuous time. Uses the schedule in `configs/ibd-ddpm.yaml`; `submit_eval.sh` runs it first |
+| `submit_eval.sh` | `bash submit_eval.sh <ckpt> <name>`: sample + `evaluate.py` (GPU), then the closure test (CPU), chained, with email |
 | `submit_train.sh`, `submit_sample.sh` | Slurm wrappers (iaifi_gpu). Their headers give the costs measured on an A100 MIG slice: training 63 s/epoch + 62 s per validation (5.2 h for 200 epochs); sampling 2.2 ms/event at 1000 DDIM steps |
 
 Changes to the shared library code from upstream and the old proton version:

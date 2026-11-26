@@ -35,13 +35,24 @@ def register(name):
 
 class Method:
     """Base class. Common options (any method): max_N, min_pitch, max_grid skip a method
-    where it is too slow / not meaningful (rows are simply not produced)."""
+    where it is too slow / not meaningful (rows are simply not produced).
+
+    ref_mult: reference (template) size as a multiple of N (default 1 = the split-half
+    design). A large multiple approximates a noiseless template. Only methods whose
+    supports_ref_mult() is true accept it; the engine skips the method at grid points where
+    the usable pool cannot supply N * (1 + ref_mult) events."""
     needs_ref = True
 
-    def __init__(self, max_N=None, min_pitch=None, max_grid=None):
+    def __init__(self, max_N=None, min_pitch=None, max_grid=None, ref_mult=1):
         self.max_N = max_N
         self.min_pitch = min_pitch
         self.max_grid = max_grid
+        if int(ref_mult) != ref_mult or ref_mult < 1:
+            raise ValueError(f"ref_mult must be a positive integer, got {ref_mult}")
+        self.ref_mult = int(ref_mult)
+
+    def supports_ref_mult(self):
+        return False
 
     def applicable(self, N, geom):
         if self.max_N is not None and N > self.max_N:
@@ -63,7 +74,10 @@ def build(label, spec):
     if type_name not in REGISTRY:
         raise KeyError(f"Unknown method type '{type_name}' (label '{label}'). "
                        f"Known: {sorted(REGISTRY)}")
-    return REGISTRY[type_name](**spec)
+    m = REGISTRY[type_name](**spec)
+    if m.ref_mult != 1 and not m.supports_ref_mult():
+        raise ValueError(f"'{label}': {type_name} with these options does not support ref_mult")
+    return m
 
 
 # Built-in methods (import registers them).

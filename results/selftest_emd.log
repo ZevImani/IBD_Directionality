@@ -1,0 +1,60 @@
+NVIDIA A100-SXM4-40GB
+1. emd_sliced large-template path
+  PASS  c=1 torch == numpy (max diff 8.88e-16 mm)
+  PASS  c=5 == scipy brute force (max diff 3.55e-15 mm)
+2. cloud-in-cell template == Monte Carlo over vertex cell phases
+  PASS  pitch 150 mm, psi 0 deg: total variation 1.72e-03 (MC noise ~2.3e-03), sum T = 1.000000
+  PASS  pitch 150 mm, psi 23 deg: total variation 6.95e-04 (MC noise ~2.3e-03), sum T = 1.000000
+  PASS  pitch 50 mm, psi 0 deg: total variation 1.59e-03 (MC noise ~4.2e-03), sum T = 1.000000
+  PASS  pitch 50 mm, psi 23 deg: total variation 1.58e-03 (MC noise ~4.2e-03), sum T = 1.000000
+3. injection recovery, theta_true = 10 deg, N = 2000, K = 6
+  PASS    150 mm emd_sliced           mean   9.47 +- 1.69  (spread 4.14)
+  PASS    150 mm emd_sliced_t5        mean   9.19 +- 1.21  (spread 2.98)
+  PASS    150 mm emd_sliced_disc      mean   8.64 +- 1.81  (spread 4.44)
+  PASS    150 mm emd_sliced_disc_t5   mean   8.43 +- 1.25  (spread 3.06)
+  PASS    150 mm emd_exact_disc       mean   8.95 +- 1.85  (spread 4.52)
+  PASS    150 mm centroid_disc        mean   7.94 +- 1.02  (spread 2.50)
+  PASS     50 mm emd_sliced           mean   8.77 +- 0.85  (spread 2.09)
+  PASS     50 mm emd_sliced_t5        mean   7.84 +- 1.12  (spread 2.75)
+  PASS     50 mm emd_sliced_disc      mean   8.74 +- 0.90  (spread 2.19)
+  PASS     50 mm emd_sliced_disc_t5   mean   8.01 +- 1.14  (spread 2.80)
+  PASS     50 mm emd_exact_disc       mean   8.85 +- 1.01  (spread 2.47)
+  PASS     50 mm centroid_disc        mean   8.67 +- 1.06  (spread 2.59)
+4. zoom (5 deg full circle + 1 deg zoom) == full 1-deg circle scan
+  PASS  max |difference| 0.0e+00 deg
+ALL PASS
+5. seconds per estimate (pitch 50 mm, one estimate each)
+  N=   300 centroid_cont             0.000 s
+  N=   300 centroid_disc             0.000 s
+  N=   300 emd_sliced                0.032 s
+  N=   300 emd_sliced_t20            0.013 s
+  N=   300 emd_exact                 0.521 s
+  N=   300 emd_sliced_disc           0.004 s
+  N=   300 emd_sliced_disc_t20       0.018 s
+  N=   300 emd_exact_disc            0.016 s
+  N=   300 emd_exact_disc_t20        0.042 s
+  N=  1000 centroid_cont             0.000 s
+  N=  1000 centroid_disc             0.000 s
+  N=  1000 emd_sliced                0.131 s
+  N=  1000 emd_sliced_t20            0.014 s
+  N=  1000 emd_exact                 6.566 s
+  N=  1000 emd_sliced_disc           0.005 s
+  N=  1000 emd_sliced_disc_t20       0.072 s
+  N=  1000 emd_exact_disc            0.032 s
+  N=  1000 emd_exact_disc_t20        0.098 s
+  N=  3000 centroid_cont             0.000 s
+  N=  3000 centroid_disc             0.000 s
+  N=  3000 emd_sliced                0.465 s
+  N=  3000 emd_sliced_t20            0.023 s
+  N=  3000 emd_sliced_disc           0.011 s
+  N=  3000 emd_sliced_disc_t20       0.202 s
+  N=  3000 emd_exact_disc            0.035 s
+  N=  3000 emd_exact_disc_t20        0.238 s
+  N= 10000 centroid_cont             0.000 s
+  N= 10000 centroid_disc             0.000 s
+  N= 10000 emd_sliced                1.741 s
+  N= 10000 emd_sliced_t20            0.062 s
+  N= 10000 emd_sliced_disc           0.033 s
+  N= 10000 emd_sliced_disc_t20       0.661 s
+  N= 10000 emd_exact_disc            0.064 s
+  N= 10000 emd_exact_disc_t20        0.710 s

@@ -2,6 +2,10 @@
 
     python -m dirreco.fisher                      # -> results/crlb/crlb.csv, crlb.txt
     python -m dirreco.fisher --selftest           # Gaussian check: CRLB must equal theta0
+    python -m dirreco.fisher --pitches 50 --theta 0,5,10,15,20,25,30,35,40,45   # -> crlb_angle.csv
+
+--theta rotates the pool CCW (as the engine injects theta_true) before computing. The continuous
+bound cannot depend on it; the cell-hop bound can, because the lattice is fixed while the cloud turns.
 
 A rotation of the neutrino direction by theta rotates the displacement distribution p(r_xy). The
 per-event Fisher information is I = E[(d/dtheta log p)^2], and no unbiased estimator using N
@@ -27,7 +31,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .data import REPO, load_events
+from .data import REPO, load_events, rotate_xy
 
 OUT = REPO / "results" / "crlb"
 
@@ -117,13 +121,15 @@ def theta_deg(info):
     return float(np.degrees(1.0 / np.sqrt(info))) if info > 0 else float("nan")
 
 
-def run(disp, pitches, Ks, log):
+def run(disp, pitches, Ks, log, theta=0.0):
+    """theta: the CCW rotation already applied to disp; theta0 is taken in the unrotated frame."""
     rows = []
     for p in pitches:
         cut = p / np.sqrt(2.0) if p > 0 else 0.0
         u = np.hypot(disp[:, 0], disp[:, 1]) > cut
         du = disp[u]
-        th0 = float(np.degrees(np.std(du[:, 1]) / np.mean(du[:, 0])))
+        dx, dy = rotate_xy(du[:, 0], du[:, 1], -theta) if theta else (du[:, 0], du[:, 1])
+        th0 = float(np.degrees(np.std(dy) / np.mean(dx)))
         t0 = time.time()
         cont = {K: theta_deg(continuous_info(disp, cut, K)) for K in Ks}
         disc = theta_deg(discrete_info(disp, p, cut)) if p > 0 else float("nan")
@@ -145,14 +151,17 @@ def main():
     ap.add_argument("--pitches", default="0,1,2,5,10,25,50,100,150", help="mm; 0 = no cut, continuous only")
     ap.add_argument("--K", default="4,8,12", help="Fourier orders (convergence check)")
     ap.add_argument("--max-events", type=int, help="default: the whole pool")
+    ap.add_argument("--theta", default="0",
+                    help="deg, comma list: rotate the pool CCW first. Anything but 0 writes crlb_angle.*")
     ap.add_argument("--selftest", action="store_true",
                     help="Gaussian displacements with the real mean/width: CRLB_cont must equal theta0")
     a = ap.parse_args()
     pitches = [float(x) for x in a.pitches.split(",")]
     Ks = [int(x) for x in a.K.split(",")]
+    thetas = [float(x) for x in a.theta.split(",")]
 
     OUT.mkdir(parents=True, exist_ok=True)
-    tag = "selftest" if a.selftest else "crlb"
+    tag = "selftest" if a.selftest else ("crlb" if thetas == [0.0] else "crlb_angle")
     lines = []
 
     def log(s):
@@ -169,12 +178,19 @@ def main():
         log(f"SELFTEST: Gaussian r_xy, mean ({np.mean(disp[:, 0]):.2f}, 0) mm, sigma {sig:.2f} mm. "
             "Expect CRLB_cont == theta0 at pitch 0, and CRLB_disc -> CRLB_cont as pitch -> 0.")
     log(f"{len(disp):,} events. Theta values in deg*sqrt(N_usable); eta_centroid = (CRLB/theta0)^2")
-    rows = run(disp, pitches, Ks, log)
+    rows = []
+    for th in thetas:
+        d = disp
+        if th != 0:
+            d = disp.copy()
+            d[:, 0], d[:, 1] = rotate_xy(disp[:, 0], disp[:, 1], th)
+        log(f"--- theta = {th:g} deg")
+        rows += [dict(theta=th, **r) for r in run(d, pitches, Ks, log, theta=th)]
 
     import pandas as pd
     df = pd.DataFrame(rows)
     df.to_csv(OUT / f"{tag}.csv", index=False)
-    log("\n" + df[["pitch_mm", "eff", "theta0", "crlb_cont", "crlb_disc", "eta_centroid_cont"]]
+    log("\n" + df[["theta", "pitch_mm", "eff", "theta0", "crlb_cont", "crlb_disc", "eta_centroid_cont"]]
         .to_string(index=False, float_format=lambda x: f"{x:.4f}"))
     Path(OUT / f"{tag}.txt").write_text("\n".join(lines) + "\n")
     print(f"Wrote {OUT / (tag + '.csv')}")

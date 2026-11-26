@@ -108,13 +108,15 @@ def _usable(ai, geom):
     return _CACHE[key]
 
 
-def _draw(rng, m_ok, r_ok, N):
+def _draw(rng, m_ok, r_ok, N, R):
+    """N measurement + R reference events, disjoint. R = N reproduces the split-half draw
+    (same random stream as before ref_mult existed)."""
     if m_ok is r_ok:
-        idx = rng.choice(m_ok, 2 * N, replace=False)
-        return idx[N:], idx[:N]
+        idx = rng.choice(m_ok, N + R, replace=False)
+        return idx[R:], idx[:R]
     mi = rng.choice(m_ok, N, replace=False)
-    cand = rng.choice(r_ok, 2 * N, replace=False)
-    return mi, cand[~np.isin(cand, mi)][:N]
+    cand = rng.choice(r_ok, N + R, replace=False)
+    return mi, cand[~np.isin(cand, mi)][:R]
 
 
 def _run_task(task):
@@ -131,6 +133,18 @@ def _run_task(task):
     base = dict(pitch_mm=pitch, grid_size=geom.grid_size, sweep_var=var, N=N,
                 n_total=(val if var == "n_total" else N / eff), theta_true=th,
                 eff=eff, theta0=th0, **_AUGS[ai][0])
+    # Reference size: the largest ref_mult among methods that run here and fit in the pool.
+    # Methods with a smaller ref_mult use the first N * ref_mult reference events.
+    avail = min(len(m_ok), len(r_ok))
+    active, too_big = {}, []
+    for label, m in _METHODS.items():
+        if not m.applicable(N, geom):
+            continue
+        if m.needs_ref and N * (1 + m.ref_mult) > avail:
+            too_big.append(label)
+            continue
+        active[label] = m
+    R = N * max([m.ref_mult for m in active.values() if m.needs_ref] or [1])
     landscape = cfg.get("kind", "trials") == "landscape"
     # same_samples: true -> every theta_true sees the identical K samples (the "rotate the
     # bins, keep the data" construction); false -> fresh samples per theta_true.
@@ -138,13 +152,16 @@ def _run_task(task):
     rng = np.random.default_rng([cfg["seed"], 1, sid] if same else [cfg["seed"], 2, tid])
     rows = []
     for k in range(cfg["sweep"]["K"]):
-        mi, ri = _draw(rng, m_ok, r_ok, N)
+        mi, ri = _draw(rng, m_ok, r_ok, N, R)
         meas = meas_pool.take(mi).rotated(th)
-        ref = ref_pool.take(ri)
+        ref_all = ref_pool.take(ri)
+        refs = {}
         losses = {}
-        for label, m in _METHODS.items():
-            if not m.applicable(N, geom):
-                continue
+        for label, m in active.items():
+            k_ref = m.ref_mult * N
+            if k_ref not in refs:
+                refs[k_ref] = ref_all if k_ref == R else ref_all.take(slice(0, k_ref))
+            ref = refs[k_ref]
             if isinstance(m, ScanMethod):
                 key = m.loss_key(geom)
                 if key not in losses:
@@ -159,7 +176,8 @@ def _run_task(task):
             else:
                 est = m.estimate(meas, ref, geom)
             rows.append(dict(base, trial=k, method=label, theta_hat=est))
-    return tid, rows, f"{tag}: N={N} K={cfg['sweep']['K']} ({time.time() - t0:.1f}s)"
+    note = f" | skipped (pool too small for ref_mult): {', '.join(too_big)}" if too_big else ""
+    return tid, rows, f"{tag}: N={N} R={R} K={cfg['sweep']['K']} ({time.time() - t0:.1f}s){note}"
 
 
 def _init_worker():

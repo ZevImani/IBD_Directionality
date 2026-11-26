@@ -256,6 +256,76 @@ def methods_compare(run, methods=None, ref="centroid_disc", ratio_range=(0.85, 1
     return fig
 
 
+@figure("angle")
+def angle(run, methods=None, n_boot=1000):
+    """Orientation dependence: everything vs theta_true, one row per (pitch, N).
+    Theta (95% CI); sigma / sigma of the centroid with the same readout (paired 95% CI); and the
+    mean residual minus that centroid's, per trial (paired). Since the cell lattice repeats every
+    90 deg and is mirror-symmetric, 0-45 deg covers every orientation. If results/crlb/crlb_angle.csv
+    exists (python -m dirreco.fisher --theta ...), the cell-hop and continuous CRLB are drawn too."""
+    import pandas as pd
+    from .data import REPO
+    t = run.trials
+    if t is None:
+        raise ValueError("needs trials (per-trial estimates); legacy tables have none")
+    ms = _methods(run.summary, methods)
+    styles = {m: _method_style(run, m) for m in ms}
+    refs = {ro: m for m, (fam, ro) in styles.items() if fam == "centroid"}
+    crlb_path = REPO / "results" / "crlb" / "crlb_angle.csv"
+    crlb = pd.read_csv(crlb_path) if crlb_path.exists() else None
+    rng = np.random.default_rng(0)
+    keys = sorted({(p, N) for p, N in zip(t["pitch_mm"], t["N"])}, key=lambda k: (-k[0], k[1]))
+    fig, axes = plt.subplots(len(keys), 3, figsize=(16, 4.4 * len(keys)), squeeze=False)
+    for row, (p, N) in zip(axes, keys):
+        tp = t[(t.pitch_mm == p) & (t.N == N)].copy()
+        tp["res"] = wrap(tp["theta_hat"] - tp["theta_true"])
+        res = tp.pivot_table(index=["theta_true", "trial"], columns="method", values="res")
+        rows = []
+        for th, g in tp.groupby("theta_true"):
+            for ro, ref in refs.items():
+                group = [m for m in ms if styles[m][1] == ro]
+                for m, v in _paired_sigmas(g, group, ref, n_boot, rng).items():
+                    d = (res.loc[th, m] - res.loc[th, ref]).dropna()
+                    rows.append(dict(theta=th, method=m, ref=ref, bias=d.mean(),
+                                     bias_se=d.std(ddof=1) / np.sqrt(max(len(d), 1)), **v))
+        st = pd.DataFrame(rows)
+        sq = np.sqrt(N)
+        for m in ms:
+            d = st[st.method == m].sort_values("theta")
+            if d.empty:
+                continue
+            fam, ro = styles[m]
+            c = FAMILY_COLORS.get(fam, "#52514e")
+            sty = READOUT_STYLE[ro]
+            kw = dict(color=c, ls=sty["ls"], marker=FAMILY_MARKERS.get(fam, "o"), ms=6, lw=2,
+                      mfc=sty["mfc"] or c, mew=1.6, capsize=3, label=f"{m}  ({ro})")
+            row[0].errorbar(d["theta"], d["sigma"] * sq, yerr=[(d["sigma"] - d["sigma_lo"]) * sq,
+                            (d["sigma_hi"] - d["sigma"]) * sq], **kw)
+            if fam != "centroid":
+                row[1].errorbar(d["theta"], d["ratio"], yerr=[d["ratio"] - d["ratio_lo"], d["ratio_hi"] - d["ratio"]],
+                                **{**kw, "label": f"{m} / {d['ref'].iloc[0]}"})
+                row[2].errorbar(d["theta"], d["bias"], yerr=1.96 * d["bias_se"],
+                                **{**kw, "label": f"{m} − {d['ref'].iloc[0]}"})
+        if crlb is not None:
+            cb = crlb[crlb.pitch_mm == p].sort_values("theta")
+            if not cb.empty:
+                row[0].plot(cb["theta"], cb["crlb_disc"], color="#52514e", ls="-", lw=1.2, label="CRLB cell-hop")
+                row[0].plot(cb["theta"], cb["crlb_cont"], color="#52514e", ls=":", lw=1.2, label="CRLB continuous")
+        row[1].axhline(1.0, color="#52514e", lw=1.2)
+        row[2].axhline(0.0, color="#52514e", lw=1.2)
+        K = int(st["K"].min()) if not st.empty else 0
+        row[0].set(ylabel=r"$\Theta = \sigma_\theta\sqrt{N}$ [deg]",
+                   title=f"$\\Delta x = {p:g}$ mm, N = {N:g}, K = {K} per angle")
+        row[1].set(ylabel=r"$\sigma_\theta$ / $\sigma_\theta$ of same-readout centroid",
+                   title="ratio (paired 95% CI; < 1 beats the centroid)")
+        row[2].set(ylabel="mean residual − centroid's [deg]", title="relative bias (paired 95% CI)")
+        for ax in row:
+            ax.set_xlabel(r"$\theta_{\rm true}$ [deg] (0 = cloud along a lattice axis)")
+            ax.legend(fontsize=8, loc="best")
+    fig.tight_layout()
+    return fig
+
+
 @figure("scaling")
 def scaling(run, methods=None, ref="centroid_disc"):
     """(a) sigma_theta vs occupancy rho = N/G^2; (b) Theta = sigma sqrt(N) vs rho."""
@@ -291,6 +361,72 @@ def scaling(run, methods=None, ref="centroid_disc"):
     h = [Line2D([], [], color=pcolor(p), lw=2, label=plabel(p)) for p in _pitches(s)] + extra
     fig.tight_layout(rect=(0, 0.1, 1, 1))
     fig.legend(handles=h, loc="lower center", ncol=min(len(h), 6), fontsize=9)
+    return fig
+
+
+CRLB_KIND_COLORS = {"centroid": "#2a78d6", "emd_sliced": "#eb6834", "emd_exact": "#1baf7a",
+                    "emd_sinkhorn": "#6250d6"}
+CRLB_KIND_MARKERS = {"centroid": "s", "emd_sliced": "o", "emd_exact": "D", "emd_sinkhorn": "^"}
+
+
+@figure("crlb")
+def crlb(run, methods=None, theta=None):
+    """Theta = sigma*sqrt(N) vs N against the Cramer-Rao bound, like for like. One row per pitch;
+    left: continuous readout (true r_xy), right: discrete (cell hops). Horizontal line: the CRLB
+    of that readout (results/crlb/crlb.csv, python -m dirreco.fisher); right axis: efficiency
+    eta = (CRLB/Theta)^2. Colour = estimator, solid/filled = split-half template, dashed/hollow =
+    large template (ref_mult > 1). Values below the bound at small N point to bias, not skill."""
+    import pandas as pd
+    from .data import REPO
+    s = run.summary
+    th = s["theta_true"].iloc[0] if theta is None else float(theta)
+    s = s[np.isclose(s["theta_true"], th)]
+    ms = _methods(s, methods)
+    path = REPO / "results" / "crlb" / "crlb.csv"
+    bound = pd.read_csv(path) if path.exists() else None
+    specs = run.config.get("methods", {})
+
+    def kind(m):
+        typ = dict(specs.get(m) or {}).get("type", m)
+        return typ if typ in CRLB_KIND_COLORS else "other"
+
+    def mult(m):
+        return int(dict(specs.get(m) or {}).get("ref_mult", 1))
+
+    readout = {m: _method_style(run, m)[1] for m in ms}
+    pitches = _pitches(s)
+    fig, axes = plt.subplots(len(pitches), 2, figsize=(12.5, 3.9 * len(pitches)), squeeze=False, sharex=True)
+    for row, p in zip(axes, pitches):
+        for ax, ro, col in ((row[0], "continuous", "crlb_cont"), (row[1], "discrete", "crlb_disc")):
+            for m in [m for m in ms if readout[m] == ro]:
+                sub = s[(s.pitch_mm == p) & (s.method == m)].sort_values("N")
+                if sub.empty:
+                    continue
+                k, big = kind(m), mult(m) > 1
+                c = CRLB_KIND_COLORS.get(k, "#7f7f7f")
+                ax.errorbar(sub["N"], sub["Theta"], yerr=sub["Theta_err"], color=c,
+                            marker=CRLB_KIND_MARKERS.get(k, "v"), ms=5, lw=1.6, capsize=2,
+                            ls="--" if big else "-", mfc="white" if big else c)
+            cb = np.nan
+            if bound is not None:
+                r = bound[np.isclose(bound.pitch_mm, p)]
+                cb = float(r[col].iloc[0]) if not r.empty and col in r else np.nan
+            if np.isfinite(cb):
+                ax.axhline(cb, color="#52514e", lw=1.4)
+                sec = ax.secondary_yaxis("right", functions=(lambda t, cb=cb: (cb / np.maximum(t, 1e-9)) ** 2,
+                                                             lambda e, cb=cb: cb / np.sqrt(np.maximum(e, 1e-9))))
+                sec.set_ylabel(r"$\eta = (\Theta_{\rm CRLB}/\Theta)^2$", fontsize=9)
+            ax.set(xscale="log", yscale="log",
+                   title=f"{plabel(p)}, {ro} readout" + ("" if np.isfinite(cb) else " (CRLB n/a)"))
+            ax.set_ylabel(r"$\Theta = \sigma_\theta\sqrt{N}$ [deg$\sqrt{\rm ev}$]")
+    for ax in axes[-1]:
+        ax.set_xlabel(r"usable events $N$")
+    h = [Line2D([], [], color=CRLB_KIND_COLORS.get(kind(m), "#7f7f7f"), marker=CRLB_KIND_MARKERS.get(kind(m), "v"),
+                ls="--" if mult(m) > 1 else "-", mfc="white" if mult(m) > 1 else None, label=m) for m in ms]
+    h.append(Line2D([], [], color="#52514e", lw=1.4, label="CRLB (readout of the column)"))
+    fig.suptitle(rf"Efficiency vs the Cramer-Rao bound, $\theta_{{\rm true}} = {th:g}^\circ$", y=1.0)
+    fig.tight_layout(rect=(0, 0.06, 1, 0.99))
+    fig.legend(handles=h, loc="lower center", ncol=min(len(h), 5), fontsize=8.5)
     return fig
 
 

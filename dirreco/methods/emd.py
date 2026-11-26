@@ -25,11 +25,25 @@ sinkhorn_unbalanced2 (same objective as emd_sinkhorn + reach, but not log-domain
 underflows at mm-scale costs / mm-scale epsilon).
 Cell-centre points do not work with this scheme: they sit on the lattice, so the loss has
 a spurious minimum at phi = 0 whenever the rotated lattice realigns with itself.
+
+discrete: true (emd_sliced, emd_exact) -- detector (cell-hop) readout, done the other way round:
+the measurement is never rotated; it is the histogram of its cell hops (cell of capture - cell
+of vertex) on the lattice Z^2 * pitch, exactly what centroid_disc sees. The template for each
+hypothesis is forward-modelled from the reference's TRUE displacements: rotate them by
+-phi and deposit each one cloud-in-cell on the hop lattice. That is the exact expected hop
+distribution for a vertex cell phase uniform in the cell (as in dirreco/fisher.py), so it is
+smooth in phi and has no lattice artefact. W1 is then taken between the two lattice
+histograms (ground cost = distance between hop vectors, mm). Assumes the reference comes from
+MC with truth, as a real analysis template would.
+
+ref_mult: k (emd_sliced, emd_sinkhorn balanced, mmd, discrete emd_exact) -- template of k*N
+events, approximating a noiseless template (the split-half design pays template noise, about
+a factor sqrt(1 + 1/k) in sigma).
 """
 import numpy as np
 
 from . import register
-from .template import ScanMethod, _chunks, _rotations
+from .template import CHUNK, ScanMethod, _chunks, _rotations
 
 
 def _torch_device(device):
@@ -42,6 +56,64 @@ class PointCloudScan(ScanMethod):
         """-> x, y (measurement) and xr, yr (reference) displacement coordinates [mm]."""
         m, r = meas.disp, ref.disp
         return m[:, 0], m[:, 1], r[:, 0], r[:, 1]
+
+
+# ----------------------------------------------------------------------------- cell-hop lattice
+class HopLattice:
+    """Cell-hop readout on the lattice Z^2 * pitch for one (measurement, reference) pair.
+
+    meas:  normalised histogram of the measured hops, flat index (hx + H) * S + (hy + H).
+    templates(psis): expected hop histograms of the reference rotated CCW by each psi.
+    sites: (S^2, 2) hop vectors [mm] in the same flat order.
+    """
+
+    def __init__(self, meas, ref, geom):
+        p = float(geom.pitch)
+        hop = np.rint(geom.discrete_disp(meas) / p).astype(np.int64)
+        self.s = ref.disp / p                                              # [cells]
+        H = int(max(np.abs(hop).max(initial=0),
+                    np.ceil(np.hypot(self.s[:, 0], self.s[:, 1]).max(initial=0.0)))) + 1
+        S = 2 * H + 1
+        self.H, self.S, self.pitch = H, S, p
+        m = np.bincount((hop[:, 0] + H) * S + (hop[:, 1] + H), minlength=S * S).astype(float)
+        self.meas = m / m.sum()
+        ii = (np.arange(S) - H) * p
+        self.sites = np.stack(np.meshgrid(ii, ii, indexing="ij"), -1).reshape(-1, 2)
+
+    def templates(self, psis):
+        """(len(psis), S^2) cloud-in-cell hop distributions, each summing to 1. Along each axis
+        a displacement of s cells hops floor(s) cells with probability 1 - frac(s) and
+        floor(s) + 1 with probability frac(s) (uniform vertex phase; x and y independent)."""
+        S, H, R = self.S, self.H, len(self.s)
+        out = []
+        for ps in _chunks(np.asarray(psis, dtype=float), 4 * R):
+            rx, ry = _rotations(self.s[:, 0], self.s[:, 1], ps)          # (F, R)
+            x0, y0 = np.floor(rx), np.floor(ry)
+            fx, fy = rx - x0, ry - y0
+            base = ((x0.astype(np.int64) + H) * S + (y0.astype(np.int64) + H)
+                    + (np.arange(len(ps)) * S * S)[:, None])
+            T = np.zeros(len(ps) * S * S)
+            for d, w in ((0, (1 - fx) * (1 - fy)), (S, fx * (1 - fy)),
+                         (1, (1 - fx) * fy), (S + 1, fx * fy)):
+                T += np.bincount((base + d).ravel(), weights=w.ravel(), minlength=T.size)
+            out.append(T.reshape(len(ps), S * S) / R)
+        return np.concatenate(out)
+
+
+def _lattice_sliced_w1(lat, T, n_proj, reduce):
+    """Sliced W1 between lat.meas and each template row of T, on the fixed lattice sites:
+    1D W1 = sum |CDF difference| * gap, with sites sorted along each direction."""
+    a = _directions(n_proj)
+    proj = np.cos(a)[:, None] * lat.sites[:, 0] + np.sin(a)[:, None] * lat.sites[:, 1]  # (L, S2)
+    order = np.argsort(proj, axis=1, kind="stable")
+    gaps = np.diff(np.take_along_axis(proj, order, axis=1), axis=1)                    # (L, S2-1)
+    out, step = [], max(1, CHUNK // (n_proj * T.shape[1]))
+    for i in range(0, len(T), step):
+        d = lat.meas[None, :] - T[i:i + step]                                           # (F, S2)
+        c = np.cumsum(d[:, order], axis=2)[..., :-1]                                    # (F, L, S2-1)
+        w1 = (np.abs(c) * gaps[None]).sum(axis=2)
+        out.append(w1.mean(axis=1) if reduce == "mean" else w1.max(axis=1))
+    return np.concatenate(out)
 
 
 # ----------------------------------------------------------------------------- Max's proxy
@@ -75,17 +147,32 @@ class EMDExact(PointCloudScan):
     estimate at N=500 and it did not recover a 10 deg injection.
     """
 
-    def __init__(self, unbalanced=None, mass=0.9, lam=100.0, max_N=2000, **kw):
+    def __init__(self, unbalanced=None, mass=0.9, lam=100.0, max_N=2000, discrete=False, **kw):
         super().__init__(max_N=max_N, **kw)
         if unbalanced not in (None, "partial", "kr"):
             raise ValueError("unbalanced must be null, partial or kr")
+        if discrete and unbalanced:
+            raise ValueError("discrete: true is balanced only")
         self.unbalanced, self.mass, self.lam = unbalanced, float(mass), float(lam)
+        self.discrete = bool(discrete)
+
+    def supports_ref_mult(self):
+        return self.discrete          # lattice histograms: cost does not grow with the template
 
     def loss_options(self):
-        return (self.unbalanced, self.mass, self.lam)
+        return (self.unbalanced, self.mass, self.lam, self.discrete)
 
     def loss(self, meas, ref, geom):
         import ot
+        if self.discrete:
+            # Exact W1 between lattice histograms, on the sites either one occupies.
+            lat = HopLattice(meas, ref, geom)
+            T = lat.templates(-self.phis)
+            keep = (lat.meas > 0) | (T > 0).any(axis=0)
+            X = lat.sites[keep]
+            C = np.sqrt(((X[:, None, :] - X[None, :, :]) ** 2).sum(-1))
+            a = lat.meas[keep]
+            return np.array([ot.emd2(a, t / t.sum(), C, numItermax=10_000_000) for t in T[:, keep]])
         x, y, xr, yr = self.clouds(meas, ref, geom)
         n, nr = len(x), len(xr)
         if self.unbalanced == "kr":       # unit mass per event / N_ref, plus dummies
@@ -120,6 +207,9 @@ class _GeomLossScan(PointCloudScan):
 
     def _make_loss(self):
         raise NotImplementedError
+
+    def supports_ref_mult(self):
+        return True                   # weighted clouds of any size (N x k*N cost on the GPU)
 
     def _weights(self, n, nr):
         """Per-event masses (meas, ref). Default: each cloud normalised to 1."""
@@ -175,6 +265,9 @@ class EMDSinkhorn(_GeomLossScan):
     def loss_options(self):
         return (self.p, self.blur, self.scaling, self.debias, self.reach, self.backend)
 
+    def supports_ref_mult(self):
+        return self.reach is None     # unbalanced masses are 1/N_ref each: a k*N template breaks that
+
     def _weights(self, n, nr):
         return (1.0 / nr, 1.0 / nr) if self.reach is not None else (1.0 / n, 1.0 / nr)
 
@@ -214,20 +307,27 @@ class EMDSliced(PointCloudScan):
     Equal sizes: 1D W1 = mean |sorted difference|.
     reduce: mean = sliced W1 (as `sw`); max = max-sliced W1 (worst direction)."""
 
-    def __init__(self, n_proj=32, reduce="mean", **kw):
+    def __init__(self, n_proj=32, reduce="mean", discrete=False, device=None, **kw):
         super().__init__(**kw)
         if reduce not in ("mean", "max"):
             raise ValueError("reduce must be mean or max")
         self.n_proj, self.reduce = int(n_proj), reduce
+        self.discrete, self.device = bool(discrete), device
+
+    def supports_ref_mult(self):
+        return True
 
     def loss_options(self):
-        return (self.n_proj, self.reduce)
+        return (self.n_proj, self.reduce, self.discrete)
 
     def loss(self, meas, ref, geom):
+        if self.discrete:
+            lat = HopLattice(meas, ref, geom)
+            return _lattice_sliced_w1(lat, lat.templates(-self.phis), self.n_proj, self.reduce)
         a = _directions(self.n_proj)
         x, y, xr, yr = self.clouds(meas, ref, geom)
         if len(x) != len(xr):
-            raise ValueError("emd_sliced needs equal measurement and reference sizes")
+            return self._loss_large_ref(x, y, xr, yr)
         P_ref = np.sort(np.cos(a)[:, None] * xr + np.sin(a)[:, None] * yr, axis=1)
         out = []
         for ph in _chunks(self.phis, len(x) * self.n_proj):
@@ -236,6 +336,43 @@ class EMDSliced(PointCloudScan):
             P = np.sort(np.cos(A)[..., None] * x + np.sin(A)[..., None] * y, axis=-1)
             w1 = np.abs(P - P_ref[None]).mean(axis=2)            # (phi, direction)
             out.append(w1.mean(axis=1) if self.reduce == "mean" else w1.max(axis=1))
+        return np.concatenate(out)
+
+    def _loss_large_ref(self, x, y, xr, yr):
+        """Exact 1D W1 per direction for R = c*n reference points (torch; GPU if available).
+        The monotone coupling sends sorted measurement point i to the sorted reference block
+        [i*c, (i+1)*c); its cost sum_j |p_i - q_j| comes from prefix sums of q and one
+        searchsorted of p_i, so the cost is O(n log R) per direction, not O(R)."""
+        import torch
+        n, R = len(x), len(xr)
+        if R % n:
+            raise ValueError(f"emd_sliced: reference size {R} is not a multiple of {n}")
+        c = R // n
+        dev = _torch_device(self.device)
+        f64 = dict(dtype=torch.float64, device=dev)
+        a = torch.tensor(_directions(self.n_proj), **f64)
+        X = torch.tensor(np.column_stack([x, y]), **f64)
+        Q = torch.sort(torch.cos(a)[:, None] * torch.tensor(xr, **f64)
+                       + torch.sin(a)[:, None] * torch.tensor(yr, **f64), dim=1).values    # (L, R)
+        Sq = torch.cat([torch.zeros(len(a), 1, **f64), torch.cumsum(Q, dim=1)], dim=1)  # (L, R+1)
+        lo = torch.arange(n, device=dev) * c
+        hi = lo + c
+        out = []
+        with torch.no_grad():
+            for ph in _chunks(self.phis, n * self.n_proj):
+                t = torch.tensor(np.radians(ph), **f64)
+                A = a[None, :] - t[:, None]                                            # (F, L)
+                P = torch.sort(torch.cos(A)[..., None] * X[:, 0] + torch.sin(A)[..., None] * X[:, 1],
+                               dim=-1).values                                           # (F, L, n)
+                w1 = torch.empty(len(ph), len(a), **f64)
+                for l in range(len(a)):
+                    p = P[:, l, :].contiguous()
+                    k = torch.searchsorted(Q[l].contiguous(), p)
+                    k = torch.minimum(torch.maximum(k, lo), hi)                        # split point in block
+                    s = Sq[l]
+                    cost = p * (k - lo) - (s[k] - s[lo]) + (s[hi] - s[k]) - p * (hi - k)
+                    w1[:, l] = cost.sum(dim=1) / R
+                out.append((w1.mean(dim=1) if self.reduce == "mean" else w1.max(dim=1).values).cpu().numpy())
         return np.concatenate(out)
 
 

@@ -13,6 +13,7 @@ The resource requests in the two submit scripts come from measured timings and m
 | `reproduce_cpu.sh` | capacity_exposure, scaling, fnd_refine, smearing, phase_space, angle_sweep | 2.6 CPU-h (2.3 of it angle_sweep) | 15.7 min, 15.4 GB | sapphire, 16 cores, 19 GB, 19 min |
 | `reproduce_gpu.sh` | landscape, emd_compare | 4.5 GPU-h on a MIG slice + 0.6 CPU-h | 1.94 h, 4.1 GB | iaifi_gpu, 1 A100, 4 cores, 5 GB, 2 h 20 min |
 | `reproduce_gpu.sh`, 4-GPU variant | same | same | 43 min | `--gres=gpu:4 -c 5 --mem=7G -t 00:52:00 --export=ALL,JOBS=4` |
+| `emd_crlb.sh` | emd_crlb (timed 2026-11-25 on job 63595732: a K = 2 run of the full grid took 400 s on one core; summed PSS with 4 workers 4.0 GB) | 11.1 CPU-h (exact W1 at N = 1k ~4, large-template sliced W1 on CPU torch ~5) | 33 min on 24 workers, 20.4 GB | sapphire, 24 cores, 25 GB, 45 min |
 | `crlb.sh` | — (`python -m dirreco.fisher`: Gaussian self-test + real pool → `results/crlb/`) | ~0.25 CPU-h | ~4 min, 1.8 GB (measured) | sapphire, 4 cores, 6 GB, 20 min |
 
 **Measured on the first full runs (2026-11-16/17, `seff`):**

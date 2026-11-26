@@ -38,7 +38,12 @@ def _chunks(phis, n_events):
 
 
 class ScanMethod(Method):
-    def __init__(self, scan=(-180, 179, 1), refine="parabolic", **common):
+    """zoom: [half_width, step] (deg) turns the scan into a two-stage search: the `scan` grid
+    (e.g. the full circle at 5 deg) locates the minimum, then a fine grid of +-half_width around
+    it is evaluated and refined (re-centred, up to 3 times, if its minimum sits on an edge).
+    Unbiased like a full 1-deg circle scan, at a fraction of the loss evaluations."""
+
+    def __init__(self, scan=(-180, 179, 1), refine="parabolic", zoom=None, **common):
         super().__init__(**common)
         lo, hi, step = scan
         self.phis = np.arange(lo, hi + step / 2.0, step, dtype=float)
@@ -47,6 +52,11 @@ class ScanMethod(Method):
         if refine not in ("argmin", "parabolic", "sine"):
             raise ValueError(f"refine must be argmin|parabolic|sine, got {refine}")
         self.refine = refine
+        self.zoom = None
+        if zoom is not None:
+            if refine == "sine":
+                raise ValueError("zoom works with refine: argmin | parabolic")
+            self.zoom = (float(zoom[0]), float(zoom[1]))
 
     # --- to implement -------------------------------------------------------
     def loss(self, meas, ref, geom):
@@ -59,18 +69,42 @@ class ScanMethod(Method):
 
     # --- shared -------------------------------------------------------------
     def loss_key(self, geom):
-        return (type(self).__name__, self.phis.tobytes(), self.loss_options(), geom)
+        return (type(self).__name__, self.phis.tobytes(), self.loss_options(), geom, self.ref_mult)
+
+    def loss_at(self, meas, ref, geom, phis):
+        """loss() on an arbitrary angle grid (used by the zoom stage)."""
+        saved = self.phis
+        self.phis = np.asarray(phis, dtype=float)
+        try:
+            return self.loss(meas, ref, geom)
+        finally:
+            self.phis = saved
 
     def estimate(self, meas, ref, geom, losses=None):
         L = self.loss(meas, ref, geom) if losses is None else losses
-        return float(wrap(-self.refine_min(L)))
+        if self.zoom is None:
+            return float(wrap(-self.refine_min(L)))
+        half, step = self.zoom
+        offs = np.arange(-half, half + step / 2.0, step)
+        centre = self.phis[int(np.argmin(L))]
+        for _ in range(4):
+            phis = centre + offs
+            Lf = self.loss_at(meas, ref, geom, phis)
+            i = int(np.argmin(Lf))
+            if 0 < i < len(phis) - 1:
+                break
+            centre = phis[i]
+        return float(wrap(-self.refine_min(Lf, phis, step, circular=False)))
 
-    def refine_min(self, L):
-        phis, n = self.phis, len(L)
+    def refine_min(self, L, phis=None, step=None, circular=None):
+        phis = self.phis if phis is None else phis
+        step = self.step if step is None else step
+        circular = self.circular if circular is None else circular
+        n = len(L)
         i = int(np.argmin(L))
         if self.refine == "argmin":
             return phis[i]
-        if self.circular:
+        if circular:
             im, ip = (i - 1) % n, (i + 1) % n
         elif 0 < i < n - 1:
             im, ip = i - 1, i + 1
@@ -80,7 +114,7 @@ class ScanMethod(Method):
         if im is not None:
             dp, dz, dm = L[ip], L[i], L[im]
             denom = dp - 2.0 * dz + dm
-            phi = phis[i] + (-0.5 * (dp - dm) / denom if denom > 0 else 0.0) * self.step
+            phi = phis[i] + (-0.5 * (dp - dm) / denom if denom > 0 else 0.0) * step
         if self.refine == "parabolic":
             return phi
         try:

@@ -1,0 +1,34 @@
+# EMD vs centroid vs Cramer-Rao bound, like for like:
+#   continuous readout (true r_xy):   emd_* vs centroid_cont vs CRLB continuous
+#   discrete readout (cell hops):     emd_*_disc vs centroid_disc vs CRLB cell-hop
+# each EMD with the split-half template (N events) and a large one (_t20: 20 N events, template
+# noise ~ sqrt(1 + 1/20) = +2.5% in sigma), to test how much of the EMD-centroid gap is template noise.
+# Full-circle search (5 deg) + 1-deg zoom: no window centred on the truth, so small N is unbiased.
+# Discrete EMD from 50 mm up (the cell-hop CRLB is resolved only there; below it cell hops ~ r_xy).
+#   python run.py configs/emd_crlb.yaml --jobs 16       (CPU is enough; torch runs on CPU workers)
+#   sbatch slurm/emd_crlb.sh
+name: emd_crlb
+seed: 11
+sweep:
+  pitch_mm: [150, 100, 50, 5, 1]
+  N: [100, 300, 1000, 3000, 10000]
+  theta_true: [0, 30]          # 0 = beam along a lattice axis; 30 = generic orientation
+  same_samples: true           # identical K draws at both angles: angle effects are paired
+  K: 200
+methods:
+  centroid_cont:       {type: centroid, discrete: false}
+  centroid_disc:       {type: centroid, discrete: true}
+  # continuous readout
+  emd_sliced:          {type: emd_sliced, n_proj: 32, scan: [-180, 175, 5], zoom: [5, 1], refine: parabolic}
+  emd_sliced_t20:      {type: emd_sliced, n_proj: 32, scan: [-180, 175, 5], zoom: [5, 1], refine: parabolic, ref_mult: 20}
+  emd_exact:           {type: emd_exact, scan: [-180, 175, 5], zoom: [5, 1], refine: parabolic, max_N: 1000}
+  # discrete readout (forward-modelled cell-hop template)
+  emd_sliced_disc:     {type: emd_sliced, discrete: true, n_proj: 32, scan: [-180, 175, 5], zoom: [5, 1], refine: parabolic, min_pitch: 50}
+  emd_sliced_disc_t20: {type: emd_sliced, discrete: true, n_proj: 32, scan: [-180, 175, 5], zoom: [5, 1], refine: parabolic, min_pitch: 50, ref_mult: 20}
+  emd_exact_disc:      {type: emd_exact, discrete: true, scan: [-180, 175, 5], zoom: [5, 1], refine: parabolic, min_pitch: 50, max_N: 100000}
+  emd_exact_disc_t20:  {type: emd_exact, discrete: true, scan: [-180, 175, 5], zoom: [5, 1], refine: parabolic, min_pitch: 50, max_N: 100000, ref_mult: 20}
+plots:
+  - {figure: crlb, name: crlb_th0, theta: 0}
+  - {figure: crlb, name: crlb_th30, theta: 30}
+  - {figure: capacity, name: capacity_cont, methods: [emd_sliced, emd_sliced_t20, emd_exact], ref: centroid_cont}
+  - {figure: capacity, name: capacity_disc, methods: [emd_sliced_disc, emd_sliced_disc_t20, emd_exact_disc, emd_exact_disc_t20], ref: centroid_disc}

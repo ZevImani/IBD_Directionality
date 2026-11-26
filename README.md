@@ -1,4 +1,4 @@
-# emd_paper: IBD directional reconstruction (Paper C)
+# IBD directional reconstruction (Paper C)
 
 This repo measures how well different estimators recover the neutrino direction from
 prompt→capture displacements in a segmented detector. It compares estimators as a function
@@ -112,9 +112,9 @@ Because the per-trial estimates are stored, new figures of merit don't require a
 | `centroid` | `discrete` | atan2 of the mean displacement. `discrete: true` snaps vertex and capture to cell centres |
 | `fnd` | `scan`, `refine` | Frobenius norm of 2D count-histogram differences (Max's "continuous FND") |
 | `emd_paired` | `scan`, `refine` | Max's "W1 proxy" mean‖R(φ)mᵢ − rᵢ‖ with **random index pairing**. An upper bound, not W1 |
-| `emd_exact` | `scan`, `refine`, `unbalanced` (null \| `partial` \| `kr`), `mass` (0.9), `lam` (mm), `max_N` (2000) | **New.** Exact 2D W1 (POT network simplex). `kr` = exact unbalanced W1 (Kantorovich–Rubinstein: create/destroy mass at `lam` per unit). `partial` = exact partial OT moving only `mass` |
+| `emd_exact` | `scan`, `refine`, `unbalanced` (null \| `partial` \| `kr`), `mass` (0.9), `lam` (mm), `max_N` (2000), `discrete` | **New.** Exact 2D W1 (POT network simplex). `kr` = exact unbalanced W1 (Kantorovich–Rubinstein: create/destroy mass at `lam` per unit). `partial` = exact partial OT moving only `mass`. `discrete: true` = cell-hop readout (see EMD notes); accepts `ref_mult` |
 | `emd_sinkhorn` | `scan`, `refine`, `p` (1\|2), `blur` (mm), `scaling` (0.9), `debias`, `reach` (mm), `device`, `backend` | **New.** Entropic W_p / Sinkhorn divergence (geomloss, GPU). `reach: <mm>` = unbalanced (KL marginals) |
-| `emd_sliced` | `scan`, `refine`, `n_proj`, `reduce` (mean\|max) | **New.** Sliced W1 on unbinned points; `reduce: max` = max-sliced W1 |
+| `emd_sliced` | `scan`, `refine`, `n_proj`, `reduce` (mean\|max), `discrete`, `device` | **New.** Sliced W1 on unbinned points; `reduce: max` = max-sliced W1. `discrete: true` = cell-hop readout. Accepts `ref_mult` (exact unequal-size 1D W1, torch) |
 | `emd_sliced_kr` | `scan`, `refine`, `n_proj`, `lam` (mm), `bin_width` (mm), `device` | **New.** Sliced unbalanced W1 (`suw1`): exact 1D KR per direction via the max-plus DP (torch, GPU) |
 | `mmd` | `scan`, `refine`, `kernel` (energy\|gaussian\|laplacian), `blur` (mm) | **New.** Kernel-distance baselines (geomloss); not optimal transport |
 | `image_l2` | `scan`, `refine` | L2 between histograms, with the measurement rotated as an image |
@@ -127,6 +127,8 @@ The scan options work like this:
   - `argmin`: the best grid point;
   - `parabolic`: a 3-point vertex fit around it;
   - `sine`: Gabe's global fit a|sin((φ−φ₀)/2)|+c.
+- `zoom: [half_width, step]` makes the scan two-stage: the `scan` grid (e.g. `[-180, 175, 5]`) finds the basin, then a `step` grid of ±`half_width` around it is evaluated and refined (re-centred if its minimum is on an edge). It searches the whole circle, so unlike the ±15° window it doesn't clip small-N estimates, and it costs 83 loss evaluations instead of 360. It gives the same answer as a full 1° scan (checked in `dirreco/selftest_emd.py`). Works with `argmin` and `parabolic`.
+- `ref_mult: k` (any method that supports it) uses a template of k·N events instead of N, which approximates a noiseless template. The engine draws N + k·N disjoint events per trial; methods with a smaller `ref_mult` use the first events of the same reference. With `ref_mult` absent or 1, the draws are exactly the old split-half draws. A method is skipped at grid points where the usable pool can't supply N(1+k) events.
 
 EMD notes (code: [dirreco/methods/emd.py](dirreco/methods/emd.py)):
 
@@ -155,7 +157,8 @@ EMD notes (code: [dirreco/methods/emd.py](dirreco/methods/emd.py)):
   - Every variant recovers a 10° injection within noise.
   - Sinkhorn's distance to exact W1 is set by `scaling`, not by blur or float precision: the loss-curve shape error over φ is 0.43 mm at 0.9 and 0.21 mm at 0.95, on a 6 mm landscape.
 - **Speed.** `emd_sliced_kr` costs grow with λ/`bin_width`, the number of DP levels: 0.03 s per estimate at λ=30 mm, but 88 s at λ=10⁴ on CPU.
-- **Continuous clouds only.** All EMD methods act on the continuous displacement clouds. Cell-centre points don't work with a rotation scan: they sit on the lattice, so the loss has a spurious minimum at φ = 0. In a test, θ̂ = 0.04° for a 10° injection.
+- **Readout.** By default, EMD methods act on the true, continuous displacement clouds; the pitch enters only through the usable cut. So they correspond to `centroid_cont` and the continuous CRLB, not to `centroid_disc`. Rotating cell-centre points doesn't work: they sit on the lattice, so the loss has a spurious minimum at φ = 0 (θ̂ = 0.04° for a 10° injection in a test).
+- **`discrete: true`** (`emd_sliced`, `emd_exact`) is the detector-level version. The measurement is never rotated: it is the histogram of its cell hops on the lattice ℤ²·Δx, which is what `centroid_disc` sees. For each hypothesis φ, the template is forward-modelled from the reference's *true* displacements: rotate them by −φ, then deposit each one cloud-in-cell on the hop lattice. That is the exact expected hop distribution for a vertex phase uniform within its cell, as in `dirreco/fisher.py`. It is smooth in φ, so there is no lattice artefact. W1 is computed between the two lattice histograms, with ground cost equal to the distance between hops. The method assumes the template comes from MC with truth, as a real analysis template would. Checked against a Monte Carlo over vertex phases, and it recovers 10° injections (`python -m dirreco.selftest_emd`).
 - Timing on an A100 MIG 3g.20gb slice, per scan angle (Sinkhorn at `scaling` 0.7; 0.9 needs about 3.4× more iterations):
 
   | Method | N | Time per angle |
@@ -203,7 +206,10 @@ To add a figure, decorate a function with `@figure` in `plots.py`.
 | `angle_sweep` | `paper_c_stats_package_v0_6_6_4 --mode angle-sweep` + `plot_full360_publication_v5` | full360 |
 | `landscape` | `compute_and_plot_zev_benchmark_v3`, `plot_l2_vs_fnd_vs_emd_v3` | landscape |
 | `emd_compare` | — (new: 13 EMD/OT/kernel variants (Sinkhorn: balanced and reach100 only), balanced and unbalanced, vs FND/centroid; GPU; results in issue 1) | capacity_balanced, capacity_unbalanced, capacity_variants, scaling |
-| `cnn_capacity` | — (new; train first, see `cnn/README.md`) | capacity |
+| `cnn_p50_check` | — (new; CNN vs centroids/FND at 50 mm on held-out events; results in `cnn/README.md`) | methods, angle |
+| `cnn_angle` | — (new; CNN vs centroid over θ_true = 0–45° at 50 mm, same samples at every angle; results in `cnn/README.md`) | angle, methods |
+| `emd_crlb` | — (new; EMD vs centroid vs CRLB, like for like: continuous and cell-hop readout, split-half and 20N templates, full-circle scan, K = 200, θ_true 0 and 30°; `sbatch slurm/emd_crlb.sh`) | crlb_th0, crlb_th30, capacity_cont, capacity_disc |
+| `cnn_capacity` | — (new; 50 + 5 mm; **not run yet**: the 5 mm model isn't trained, and the checkpoint paths need updating) | capacity |
 | `ldm_closure` | — (new; run on real, then with `--data ldm/samples/<name> --tag gen`, then `ldm/closure.py`) | capacity, closure |
 | — | `plot_detector_cross_sections_v1_0` | `plot.py data --figure hits` |
 | — | `compute_crlb_and_parabolic_v1_0` | now the `theta0` column of every run |
@@ -263,3 +269,9 @@ These are carried over from the old README; the details are in `archive/README_2
    - At Δx = 5 and 1 mm, `fnd_parab` gives σ ≈ 8° at both N = 1k and N = 10k, with a bias of about −1°. Every other method improves roughly as 1/√N.
    - At 150 and 50 mm FND behaves normally.
    - Suspects: the ±15° 1° scan grid and parabolic refinement when the histograms are very sparse (ρ ≪ 1). Check this before using FND numbers at fine pitch.
+7. **The CNN doesn't beat the centroid at 50 mm (new, `cnn_p50_check`, K = 2000 per N).** Details and figures are in [cnn/README.md](cnn/README.md#results-so-far-50-mm-pitch).
+   - With exact positions it is 1–2% worse than the continuous centroid. With cell readout it is 1–2% better than the discrete centroid. Both centroids already sit at their CRLB.
+   - **Orientation (`cnn_angle`, 0–45°).** The cell-hop CRLB is flat with angle (138.4–138.5; `python -m dirreco.fisher --theta ...` → `results/crlb/crlb_angle.csv`).
+     - The CNN's Θ varies by about ±3% with angle, irregularly. The network is not exactly rotation-equivariant.
+     - It also has a relative bias of up to +0.15° that depends on angle and doesn't shrink with N. That is a systematic floor which would matter at N ≳ 10⁶.
+   - Still open: 5 mm.

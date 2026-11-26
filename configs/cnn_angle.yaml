@@ -1,0 +1,25 @@
+# Does the CNN's performance depend on the direction relative to the cell lattice?
+# cnn_p50_check found, at N >= 3000, CNN/centroid ~0.99 at theta = 0 but ~0.97 at 37 deg (discrete), and a
+# +0.1 deg CNN-only bias at 37 deg. This maps it over 0-45 deg, which covers every orientation: the
+# square lattice repeats every 90 deg and is mirror-symmetric about 0 and 45.
+# same_samples: true reuses the K draws at every angle, so differences between angles are paired too.
+#   python run.py configs/cnn_angle.yaml --jobs 1                         (GPU node)
+#   python -m dirreco.fisher --pitches 50 --theta 0,5,10,15,20,25,30,35,40,45   (cell-hop CRLB vs angle)
+#   python cnn/compare.py results/studies/cnn_angle --ref centroid_disc
+name: cnn_angle
+seed: 7
+data: {max_events: 2000000}       # == --holdout used in cnn/train.py
+sweep:
+  pitch_mm: [50]
+  N: [1000, 10000]
+  theta_true: {start: 0, stop: 45, step: 5}
+  K: 1000
+  same_samples: true
+methods:
+  centroid_cont: {type: centroid, discrete: false}
+  centroid_disc: {type: centroid, discrete: true}
+  cnn_cont:      {type: cnn, checkpoint: cnn/checkpoints/p50_e60/best.pt}
+  cnn_disc:      {type: cnn, checkpoint: cnn/checkpoints/p50_disc/best.pt}
+plots:
+  - {figure: angle}                                  # Theta, ratio and relative bias vs theta_true
+  - {figure: methods, ref: centroid_disc}            # pooled over angles

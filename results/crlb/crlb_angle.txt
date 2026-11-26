@@ -1,0 +1,33 @@
+8,999,997 events. Theta values in deg*sqrt(N_usable); eta_centroid = (CRLB/theta0)^2
+--- theta = 0 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.49  (6 s)
+--- theta = 5 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.52  (6 s)
+--- theta = 10 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.42  (5 s)
+--- theta = 15 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.53  (5 s)
+--- theta = 20 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.54  (6 s)
+--- theta = 25 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.45  (5 s)
+--- theta = 30 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.39  (6 s)
+--- theta = 35 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.48  (6 s)
+--- theta = 40 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.53  (5 s)
+--- theta = 45 deg
+pitch     50  eff 0.6996  theta0  130.86 | CRLB cont K8: 128.78 | disc  138.47  (6 s)
+
+  theta  pitch_mm    eff   theta0  crlb_cont  crlb_disc  eta_centroid_cont
+ 0.0000   50.0000 0.6996 130.8570   128.7825   138.4938             0.9685
+ 5.0000   50.0000 0.6996 130.8570   128.7825   138.5231             0.9685
+10.0000   50.0000 0.6996 130.8570   128.7825   138.4165             0.9685
+15.0000   50.0000 0.6996 130.8570   128.7825   138.5271             0.9685
+20.0000   50.0000 0.6996 130.8570   128.7825   138.5392             0.9685
+25.0000   50.0000 0.6996 130.8570   128.7825   138.4454             0.9685
+30.0000   50.0000 0.6996 130.8570   128.7825   138.3881             0.9685
+35.0000   50.0000 0.6996 130.8570   128.7825   138.4842             0.9685
+40.0000   50.0000 0.6996 130.8570   128.7825   138.5339             0.9685
+45.0000   50.0000 0.6996 130.8570   128.7825   138.4698             0.9685

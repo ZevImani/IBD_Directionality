@@ -1,6 +1,6 @@
 # 50 mm CNN check on held-out events: CNN (continuous and discrete inputs) vs both centroids and FND.
-#   python run.py configs/cnn_p50_check.yaml --jobs 1 --methods centroid_cont,centroid_disc,fnd_parab,cnn_cont --tag cont
-#   python run.py configs/cnn_p50_check.yaml --jobs 1          # once cnn/checkpoints/p50_disc/best.pt exists
+#   (an earlier cnn_cont-only run, --tag cont, was identical to this subset and was removed)
+#   python run.py configs/cnn_p50_check.yaml --jobs 1        # GPU node, ~11 min
 #   python cnn/compare.py results/studies/cnn_p50_check     # table of Theta and ratios
 # Each CNN gets its own label: one `cnn` entry holds at most one checkpoint per pitch.
 name: cnn_p50_check
@@ -19,4 +19,4 @@ methods:
   cnn_disc:      {type: cnn, checkpoint: cnn/checkpoints/p50_disc/best.pt}
 plots:
   - {figure: methods, ref: centroid_disc}            # all methods overlaid: sigma, Theta, ratio
-  - {figure: capacity, methods: [fnd_parab, cnn_cont, cnn_disc], ref: centroid_disc}
+  - {figure: angle, methods: [centroid_cont, centroid_disc, cnn_cont, cnn_disc]}   # theta 0 vs 37

@@ -301,11 +301,30 @@ def _directions(n_proj):
     return np.pi * np.arange(n_proj) / n_proj
 
 
+def _meas_directions(n_proj, phis):
+    """Measurement direction for every (phi, slice) pair of a sliced scan, deduplicated.
+
+    (R(phi) m) . u_a == m . u_(a - phi), so pair (phi, a) needs the measurement sorted along
+    a - phi. Many pairs share a direction (all of them fall on one 1-deg grid when the slice
+    spacing 180/n_proj and the scan angles are whole degrees, e.g. n_proj = 36), and u_(d+180)
+    = -u_d, whose sorted projections are those along d reversed and negated. Returns
+    (a_deg, base, inv, flip): base = distinct directions in [0, 180) [deg]; pair (i, l) uses
+    base[inv[i, l]], reversed and negated where flip[i, l]."""
+    a_deg = 180.0 * np.arange(n_proj) / n_proj
+    A = np.mod(np.round(np.mod(a_deg[None, :] - np.asarray(phis, float)[:, None], 360.0), 9), 360.0)
+    flip = A >= 180.0
+    base, inv = np.unique(np.where(flip, A - 180.0, A), return_inverse=True)
+    return a_deg, base, inv.reshape(A.shape), flip
+
+
 @register("emd_sliced")
 class EMDSliced(PointCloudScan):
     """Sliced W1 over `n_proj` evenly spaced (deterministic) directions in [0, 180).
     Equal sizes: 1D W1 = mean |sorted difference|.
-    reduce: mean = sliced W1 (as `sw`); max = max-sliced W1 (worst direction)."""
+    reduce: mean = sliced W1 (as `sw`); max = max-sliced W1 (worst direction).
+    Each distinct measurement direction is sorted once per scan (see _meas_directions). With
+    n_proj dividing 180 (36, 45, 60, 90, 180) and whole-degree scan angles there are at most 180
+    sorts per loss call, however many angles and slices; n_proj = 32 gets less reuse."""
 
     def __init__(self, n_proj=32, reduce="mean", discrete=False, device=None, **kw):
         super().__init__(**kw)
@@ -324,25 +343,31 @@ class EMDSliced(PointCloudScan):
         if self.discrete:
             lat = HopLattice(meas, ref, geom)
             return _lattice_sliced_w1(lat, lat.templates(-self.phis), self.n_proj, self.reduce)
-        a = _directions(self.n_proj)
         x, y, xr, yr = self.clouds(meas, ref, geom)
         if len(x) != len(xr):
             return self._loss_large_ref(x, y, xr, yr)
-        P_ref = np.sort(np.cos(a)[:, None] * xr + np.sin(a)[:, None] * yr, axis=1)
-        out = []
-        for ph in _chunks(self.phis, len(x) * self.n_proj):
-            # (R(phi) m) . u_a  ==  m . u_(a - phi)
-            A = a[None, :] - np.radians(ph)[:, None]
-            P = np.sort(np.cos(A)[..., None] * x + np.sin(A)[..., None] * y, axis=-1)
-            w1 = np.abs(P - P_ref[None]).mean(axis=2)            # (phi, direction)
-            out.append(w1.mean(axis=1) if self.reduce == "mean" else w1.max(axis=1))
-        return np.concatenate(out)
+        a_deg, base, inv, flip = _meas_directions(self.n_proj, self.phis)
+        a = np.radians(a_deg)
+        P_ref = np.sort(np.cos(a)[:, None] * xr + np.sin(a)[:, None] * yr, axis=1)      # (L, n)
+        # sorted meas along d+180 is -(sorted along d)[::-1]; |that - q| = |sorted along d - (-q[::-1])|
+        Q2 = np.stack([P_ref, -P_ref[:, ::-1]])                                         # (2, L, n)
+        w1 = np.empty(inv.shape)                                                        # (phi, slice)
+        step = max(1, CHUNK // len(x))
+        for i in range(0, len(base), step):                     # a block of distinct directions
+            t = np.radians(base[i:i + step])
+            S = np.sort(np.cos(t)[:, None] * x + np.sin(t)[:, None] * y, axis=1)       # (B, n)
+            f, l = np.nonzero((inv >= i) & (inv < i + step))    # the pairs that use this block
+            for j in range(0, len(f), step):
+                fj, lj = f[j:j + step], l[j:j + step]
+                w1[fj, lj] = np.abs(S[inv[fj, lj] - i] - Q2[flip[fj, lj].astype(np.intp), lj]).mean(axis=1)
+        return w1.mean(axis=1) if self.reduce == "mean" else w1.max(axis=1)
 
     def _loss_large_ref(self, x, y, xr, yr):
         """Exact 1D W1 per direction for R = c*n reference points (torch; GPU if available).
         The monotone coupling sends sorted measurement point i to the sorted reference block
         [i*c, (i+1)*c); its cost sum_j |p_i - q_j| comes from prefix sums of q and one
-        searchsorted of p_i, so the cost is O(n log R) per direction, not O(R)."""
+        searchsorted of p_i, so the cost is O(n log R) per direction, not O(R).
+        Measurement sorts are shared across the scan as in loss()."""
         import torch
         n, R = len(x), len(xr)
         if R % n:
@@ -350,30 +375,35 @@ class EMDSliced(PointCloudScan):
         c = R // n
         dev = _torch_device(self.device)
         f64 = dict(dtype=torch.float64, device=dev)
-        a = torch.tensor(_directions(self.n_proj), **f64)
+        a_deg, base, inv, flip = _meas_directions(self.n_proj, self.phis)
+        L = len(a_deg)
+        a = torch.tensor(np.radians(a_deg), **f64)
         X = torch.tensor(np.column_stack([x, y]), **f64)
         Q = torch.sort(torch.cos(a)[:, None] * torch.tensor(xr, **f64)
                        + torch.sin(a)[:, None] * torch.tensor(yr, **f64), dim=1).values    # (L, R)
-        Sq = torch.cat([torch.zeros(len(a), 1, **f64), torch.cumsum(Q, dim=1)], dim=1)  # (L, R+1)
+        Sq = torch.cat([torch.zeros(L, 1, **f64), torch.cumsum(Q, dim=1)], dim=1)       # (L, R+1)
         lo = torch.arange(n, device=dev) * c
         hi = lo + c
-        out = []
+        w1 = torch.empty(inv.shape, **f64)                                              # (phi, slice)
+        step = max(1, CHUNK // n)
         with torch.no_grad():
-            for ph in _chunks(self.phis, n * self.n_proj):
-                t = torch.tensor(np.radians(ph), **f64)
-                A = a[None, :] - t[:, None]                                            # (F, L)
-                P = torch.sort(torch.cos(A)[..., None] * X[:, 0] + torch.sin(A)[..., None] * X[:, 1],
-                               dim=-1).values                                           # (F, L, n)
-                w1 = torch.empty(len(ph), len(a), **f64)
-                for l in range(len(a)):
-                    p = P[:, l, :].contiguous()
-                    k = torch.searchsorted(Q[l].contiguous(), p)
-                    k = torch.minimum(torch.maximum(k, lo), hi)                        # split point in block
-                    s = Sq[l]
-                    cost = p * (k - lo) - (s[k] - s[lo]) + (s[hi] - s[k]) - p * (hi - k)
-                    w1[:, l] = cost.sum(dim=1) / R
-                out.append((w1.mean(dim=1) if self.reduce == "mean" else w1.max(dim=1).values).cpu().numpy())
-        return np.concatenate(out)
+            for i in range(0, len(base), step):                 # a block of distinct directions
+                t = torch.tensor(np.radians(base[i:i + step]), **f64)
+                S = torch.sort(torch.cos(t)[:, None] * X[:, 0] + torch.sin(t)[:, None] * X[:, 1],
+                               dim=1).values                                            # (B, n)
+                S = torch.cat([S, -S.flip(1)])                  # row B + b: direction base[i + b] + 180
+                for l in range(L):
+                    sel = np.flatnonzero((inv[:, l] >= i) & (inv[:, l] < i + step))
+                    for j in range(0, len(sel), step):
+                        fs = sel[j:j + step]
+                        rows = inv[fs, l] - i + len(t) * flip[fs, l]
+                        p = S[torch.as_tensor(rows, device=dev)]                        # (F', n)
+                        k = torch.searchsorted(Q[l].contiguous(), p)
+                        k = torch.minimum(torch.maximum(k, lo), hi)                    # split point in block
+                        s = Sq[l]
+                        cost = p * (k - lo) - (s[k] - s[lo]) + (s[hi] - s[k]) - p * (hi - k)
+                        w1[torch.as_tensor(fs, device=dev), l] = cost.sum(dim=1) / R
+        return (w1.mean(dim=1) if self.reduce == "mean" else w1.max(dim=1).values).cpu().numpy()
 
 
 def kr_1d(m, n_half, bin_width):

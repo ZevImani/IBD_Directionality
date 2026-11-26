@@ -157,6 +157,11 @@ EMD notes (code: [dirreco/methods/emd.py](dirreco/methods/emd.py)):
   - Every variant recovers a 10° injection within noise.
   - Sinkhorn's distance to exact W1 is set by `scaling`, not by blur or float precision: the loss-curve shape error over φ is 0.43 mm at 0.9 and 0.21 mm at 0.95, on a 6 mm landscape.
 - **Speed.** `emd_sliced_kr` costs grow with λ/`bin_width`, the number of DP levels: 0.03 s per estimate at λ=30 mm, but 88 s at λ=10⁴ on CPU.
+- **`emd_sliced` shares its sorts across the scan (2026-11-26).** Rotating the measurement by φ and projecting on u_a is the same as projecting it on u_(a−φ). The old code still re-sorted the measurement for every (φ, slice) pair. It now sorts each distinct direction once, and treats u_(d+180°) as u_d reversed and negated. The loss is unchanged: it agrees with the old code to < 10⁻¹³ mm (`selftest_emd` check 0), so earlier results stand.
+  - The reuse is complete when `n_proj` divides 180 and the scan angles are whole degrees. That gives at most 180 sorts per loss call.
+  - Measured on one CPU core at N = 10k, with a 5° full circle plus an 11-point 1° zoom: `n_proj: 32` (the default) takes 1.96 → 0.57 s (3.5×), and `n_proj: 36` takes 2.06 → 0.33 s (6.3×).
+  - With `ref_mult: 20`, the searches into the 200k-event template dominate, so the gain is only 1.3–1.4× (6.2 → 4.8 s).
+  - Changing `n_proj` changes the estimator slightly, so results with 36 directions are not identical to earlier runs with 32.
 - **Readout.** By default, EMD methods act on the true, continuous displacement clouds; the pitch enters only through the usable cut. So they correspond to `centroid_cont` and the continuous CRLB, not to `centroid_disc`. Rotating cell-centre points doesn't work: they sit on the lattice, so the loss has a spurious minimum at φ = 0 (θ̂ = 0.04° for a 10° injection in a test).
 - **`discrete: true`** (`emd_sliced`, `emd_exact`) is the detector-level version. The measurement is never rotated: it is the histogram of its cell hops on the lattice ℤ²·Δx, which is what `centroid_disc` sees. For each hypothesis φ, the template is forward-modelled from the reference's *true* displacements: rotate them by −φ, then deposit each one cloud-in-cell on the hop lattice. That is the exact expected hop distribution for a vertex phase uniform within its cell, as in `dirreco/fisher.py`. It is smooth in φ, so there is no lattice artefact. W1 is computed between the two lattice histograms, with ground cost equal to the distance between hops. The method assumes the template comes from MC with truth, as a real analysis template would. Checked against a Monte Carlo over vertex phases, and it recovers 10° injections (`python -m dirreco.selftest_emd`).
 - Timing on an A100 MIG 3g.20gb slice, per scan angle (Sinkhorn at `scaling` 0.7; 0.9 needs about 3.4× more iterations):
@@ -251,7 +256,7 @@ These are carried over from the old README; the details are in `archive/README_2
    | `fnd_parab` | 1.64 | 2.52 | 8.89 | 7.83 |
    | `emd_paired` | 2.46 | 4.67 | 7.19 | 5.86 |
 
-   - **Real OT works and paired EMD does not.** The real OT estimators beat `emd_paired` by 1.7–3.6×. Sliced W1 matches Sinkhorn, and at N ≤ 1k it also matches exact W1 within errors. It costs about 0.1 s per estimate.
+   - **Real OT works and paired EMD does not.** The real OT estimators beat `emd_paired` by 1.7–3.6×. Sliced W1 matches Sinkhorn, and at N ≤ 1k it also matches exact W1 within errors. It costs about 0.1 s per estimate on that ±15° scan; for full-circle scans see the speed note in the EMD notes.
    - **Unbalanced variants don't help.** KR with λ = 100 mm is identical to balanced. KR30, reach100 and especially partial-90% are equal or worse.
    - **Nothing beats the centroid.** The OT methods trail the discrete centroid by 1.2–1.9×.
    - **Loss shapes.** `landscape` shows that Sinkhorn, energy MMD and `emd_paired` have a wide, quadratic minimum, while FND and sliced W1 rise roughly linearly. `image_l2` has a false minimum at 5 mm.

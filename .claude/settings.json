@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(sbatch)",
+      "Bash(sbatch *)",
+      "Bash(scancel)",
+      "Bash(scancel *)",
+      "Bash(bash ldm/submit_*)",
+      "Bash(bash cnn/submit_*)",
+      "Bash(bash submit_*)",
+      "Bash(./submit_*)"
+    ],
+    "ask": [
+      "Bash(git push *)"
+    ]
+  }
+}

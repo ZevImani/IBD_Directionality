@@ -62,3 +62,6 @@ archive/code/review_deliverables
 
 # ---- Paper draft: lives on Overleaf (its own history) ----
 overleaf/
+
+# ---- Claude Code: personal overrides stay local ----
+.claude/settings.local.json

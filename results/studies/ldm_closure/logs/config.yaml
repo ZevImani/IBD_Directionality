@@ -1,0 +1,43 @@
+name: ldm_closure
+seed: 11
+data:
+  max_events: 2000000
+sweep:
+  pitch_mm:
+  - 150
+  - 50
+  - 5
+  N:
+  - 100
+  - 1000
+  - 10000
+  theta_true:
+  - 0
+  K: 1000
+methods:
+  centroid_cont:
+    type: centroid
+    discrete: false
+  centroid_disc:
+    type: centroid
+    discrete: true
+  fnd_parab:
+    type: fnd
+    scan:
+    - -30
+    - 30
+    - 1
+    refine: parabolic
+  emd_sliced:
+    type: emd_sliced
+    scan:
+    - -30
+    - 30
+    - 1
+    refine: parabolic
+plots:
+- figure: capacity
+  methods:
+  - fnd_parab
+  - emd_sliced
+  ref: centroid_disc

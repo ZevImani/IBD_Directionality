@@ -1,0 +1,33 @@
+name: cnn_angle
+seed: 7
+data:
+  max_events: 2000000
+sweep:
+  pitch_mm:
+  - 50
+  N:
+  - 1000
+  - 10000
+  theta_true:
+    start: 0
+    stop: 45
+    step: 5
+  K: 1000
+  same_samples: true
+methods:
+  centroid_cont:
+    type: centroid
+    discrete: false
+  centroid_disc:
+    type: centroid
+    discrete: true
+  cnn_cont:
+    type: cnn
+    checkpoint: cnn/checkpoints/p50_e60/best.pt
+  cnn_disc:
+    type: cnn
+    checkpoint: cnn/checkpoints/p50_disc/best.pt
+plots:
+- figure: angle
+- figure: methods
+  ref: centroid_disc

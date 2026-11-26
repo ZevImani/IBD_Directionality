@@ -1,0 +1,27 @@
+[14:48:31] Started 2026-11-24T14:48:31 on holygpu7c26305.rc.fas.harvard.edu | slurm job 63475321 | python 3.8.12, numpy 1.24.4 | run.py configs/cnn_angle.yaml --jobs 1
+[14:48:31] Loading events ({'max_events': 2000000}) ...
+[14:49:08] 2,000,000 events | 20 grid points x K=1000 | methods: centroid_cont, centroid_disc, cnn_cont, cnn_disc | jobs=1
+[14:49:25] (1/20) dx=50 N=1000 th=0: N=1000 K=1000 (17.3s)
+[14:49:36] (2/20) dx=50 N=1000 th=5: N=1000 K=1000 (11.3s)
+[14:49:48] (3/20) dx=50 N=1000 th=10: N=1000 K=1000 (11.3s)
+[14:49:59] (4/20) dx=50 N=1000 th=15: N=1000 K=1000 (11.3s)
+[14:50:10] (5/20) dx=50 N=1000 th=20: N=1000 K=1000 (11.3s)
+[14:50:22] (6/20) dx=50 N=1000 th=25: N=1000 K=1000 (11.3s)
+[14:50:33] (7/20) dx=50 N=1000 th=30: N=1000 K=1000 (11.3s)
+[14:50:44] (8/20) dx=50 N=1000 th=35: N=1000 K=1000 (11.2s)
+[14:50:56] (9/20) dx=50 N=1000 th=40: N=1000 K=1000 (11.3s)
+[14:51:07] (10/20) dx=50 N=1000 th=45: N=1000 K=1000 (11.2s)
+[14:51:22] (11/20) dx=50 N=10000 th=0: N=10000 K=1000 (14.5s)
+[14:51:36] (12/20) dx=50 N=10000 th=5: N=10000 K=1000 (14.7s)
+[14:51:51] (13/20) dx=50 N=10000 th=10: N=10000 K=1000 (14.7s)
+[14:52:06] (14/20) dx=50 N=10000 th=15: N=10000 K=1000 (14.7s)
+[14:52:21] (15/20) dx=50 N=10000 th=20: N=10000 K=1000 (14.7s)
+[14:52:35] (16/20) dx=50 N=10000 th=25: N=10000 K=1000 (14.6s)
+[14:52:50] (17/20) dx=50 N=10000 th=30: N=10000 K=1000 (14.6s)
+[14:53:05] (18/20) dx=50 N=10000 th=35: N=10000 K=1000 (14.6s)
+[14:53:19] (19/20) dx=50 N=10000 th=40: N=10000 K=1000 (14.6s)
+[14:53:34] (20/20) dx=50 N=10000 th=45: N=10000 K=1000 (14.6s)
+[14:53:34] Finished 2026-11-24T14:53:34, 266.2s -> /n/home11/zimani/emd_paper/results/studies/cnn_angle/logs/trials.csv
+[plot] /n/home11/zimani/emd_paper/results/studies/cnn_angle/plots/angle.png
+[plot] /n/home11/zimani/emd_paper/results/studies/cnn_angle/plots/methods_compare.png
+Run directory: /n/home11/zimani/emd_paper/results/studies/cnn_angle

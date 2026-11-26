@@ -1,0 +1,15 @@
+[04:51:14] Started 2026-11-24T04:51:14 on holy8a28403.rc.fas.harvard.edu | slurm job 63312881 | python 3.8.12, numpy 1.24.4 | run.py configs/ldm_closure.yaml --jobs 9
+[04:51:14] Loading events ({'max_events': 2000000}) ...
+[04:51:22] 2,000,000 events | 9 grid points x K=1000 | methods: centroid_cont, centroid_disc, fnd_parab, emd_sliced | jobs=9
+[04:51:29] (1/9) dx=150 N=100 th=0: N=100 K=1000 (7.1s)
+[04:51:29] (2/9) dx=50 N=100 th=0: N=100 K=1000 (7.2s)
+[04:51:31] (3/9) dx=5 N=100 th=0: N=100 K=1000 (8.9s)
+[04:53:17] (4/9) dx=150 N=1000 th=0: N=1000 K=1000 (115.3s)
+[04:53:17] (5/9) dx=50 N=1000 th=0: N=1000 K=1000 (115.4s)
+[04:53:17] (6/9) dx=5 N=1000 th=0: N=1000 K=1000 (115.5s)
+[05:14:59] (7/9) dx=150 N=10000 th=0: N=10000 K=1000 (1417.3s)
+[05:15:07] (8/9) dx=50 N=10000 th=0: N=10000 K=1000 (1425.6s)
+[05:15:35] (9/9) dx=5 N=10000 th=0: N=10000 K=1000 (1452.7s)
+[05:15:35] Finished 2026-11-24T05:15:35, 1452.8s -> /n/home11/zimani/emd_paper/results/studies/ldm_closure/logs/trials.csv
+[plot] /n/home11/zimani/emd_paper/results/studies/ldm_closure/plots/capacity.png
+Run directory: /n/home11/zimani/emd_paper/results/studies/ldm_closure

@@ -1,0 +1,15 @@
+[04:51:14] Started 2026-11-24T04:51:14 on holy8a28403.rc.fas.harvard.edu | slurm job 63312881 | python 3.8.12, numpy 1.24.4 | run.py configs/ldm_closure.yaml --data ldm/samples/e137 --tag gen_e137 --jobs 9
+[04:51:14] Loading events ({'vertices': '/n/home11/zimani/emd_paper/ldm/samples/e137/vertices.npy', 'captures': '/n/home11/zimani/emd_paper/ldm/samples/e137/captures.npy', 'capture_offset': 0}) ...
+[04:51:16] 2,000,000 events | 9 grid points x K=1000 | methods: centroid_cont, centroid_disc, fnd_parab, emd_sliced | jobs=9
+[04:51:23] (1/9) dx=150 N=100 th=0: N=100 K=1000 (7.0s)
+[04:51:23] (2/9) dx=50 N=100 th=0: N=100 K=1000 (7.1s)
+[04:51:25] (3/9) dx=5 N=100 th=0: N=100 K=1000 (8.7s)
+[04:53:08] (4/9) dx=50 N=1000 th=0: N=1000 K=1000 (111.4s)
+[04:53:11] (5/9) dx=150 N=1000 th=0: N=1000 K=1000 (115.2s)
+[04:53:12] (6/9) dx=5 N=1000 th=0: N=1000 K=1000 (115.6s)
+[05:14:53] (7/9) dx=150 N=10000 th=0: N=10000 K=1000 (1416.7s)
+[05:14:59] (8/9) dx=50 N=10000 th=0: N=10000 K=1000 (1422.8s)
+[05:15:32] (9/9) dx=5 N=10000 th=0: N=10000 K=1000 (1456.2s)
+[05:15:32] Finished 2026-11-24T05:15:32, 1456.6s -> /n/home11/zimani/emd_paper/results/studies/ldm_closure_gen_e137/logs/trials.csv
+[plot] /n/home11/zimani/emd_paper/results/studies/ldm_closure_gen_e137/plots/capacity.png
+Run directory: /n/home11/zimani/emd_paper/results/studies/ldm_closure_gen_e137

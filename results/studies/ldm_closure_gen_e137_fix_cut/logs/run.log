@@ -1,0 +1,15 @@
+[00:12:36] Started 2026-11-26T00:12:36 on holy8a24401.rc.fas.harvard.edu | slurm job 63795499 | python 3.8.12, numpy 1.24.4 | run.py configs/ldm_closure.yaml --data ldm/samples/e137_fix_cut --tag gen_e137_fix_cut --jobs 4
+[00:12:36] Loading events ({'vertices': '/n/home11/zimani/emd_paper/ldm/samples/e137_fix_cut/vertices.npy', 'captures': '/n/home11/zimani/emd_paper/ldm/samples/e137_fix_cut/captures.npy', 'capture_offset': 0}) ...
+[00:12:37] 1,999,987 events | 9 grid points x K=1000 | methods: centroid_cont, centroid_disc, fnd_parab, emd_sliced | jobs=4
+[00:14:35] (1/9) dx=150 N=1000 th=0: N=1000 R=1000 K=1000 (117.5s)
+[00:16:32] (2/9) dx=50 N=1000 th=0: N=1000 R=1000 K=1000 (117.1s)
+[00:18:48] (3/9) dx=5 N=1000 th=0: N=1000 R=1000 K=1000 (136.6s)
+[00:18:56] (4/9) dx=150 N=100 th=0: N=100 R=100 K=1000 (8.1s)
+[00:19:05] (5/9) dx=50 N=100 th=0: N=100 R=100 K=1000 (8.2s)
+[00:19:14] (6/9) dx=5 N=100 th=0: N=100 R=100 K=1000 (9.8s)
+[00:37:03] (7/9) dx=50 N=10000 th=0: N=10000 R=10000 K=1000 (1465.9s)
+[00:37:08] (8/9) dx=150 N=10000 th=0: N=10000 R=10000 K=1000 (1470.6s)
+[00:38:06] (9/9) dx=5 N=10000 th=0: N=10000 R=10000 K=1000 (1528.5s)
+[00:38:06] Finished 2026-11-26T00:38:06, 1528.7s -> /n/home11/zimani/emd_paper/results/studies/ldm_closure_gen_e137_fix_cut/logs/trials.csv
+[plot] /n/home11/zimani/emd_paper/results/studies/ldm_closure_gen_e137_fix_cut/plots/capacity.png
+Run directory: /n/home11/zimani/emd_paper/results/studies/ldm_closure_gen_e137_fix_cut

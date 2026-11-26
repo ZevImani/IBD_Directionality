@@ -59,3 +59,6 @@ archive/code/review_deliverables
 *.zip
 *.out
 *.err
+
+# ---- Paper draft: lives on Overleaf (its own history) ----
+overleaf/
